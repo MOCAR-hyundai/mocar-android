@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "112346694546",
+    "project_id": "mocar-e0923",
+    "storage_bucket": "mocar-e0923.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:112346694546:android:126f24c147ae0d8853774b",
+        "android_client_info": {
+          "package_name": "com.autoever.mocar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-6ia4ameOGrrzP7veWIeR0QZZwWSlfXw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
