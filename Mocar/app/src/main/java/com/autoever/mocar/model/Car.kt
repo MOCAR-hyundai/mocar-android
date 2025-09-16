@@ -7,5 +7,6 @@ data class Car(
     val region: String,         // 지역(예: "서울", "부산")
     val priceKRW: Long,         // 가격(원)
     val imageRes: Int,          // drawable 리소스 (샘플용)
-    var isFavorite: Boolean = false
+    var isFavorite: Boolean = false,
+    val brandId: String
 )

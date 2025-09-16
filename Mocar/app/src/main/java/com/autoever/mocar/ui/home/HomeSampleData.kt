@@ -6,13 +6,13 @@ import com.autoever.mocar.model.Car
 
 object HomeSampleData {
     val cars = listOf(
-        Car(id = "1", title = "Ferrari-FF", mileageKm = 171_614, region = "서울", priceKRW = 138_600_000, imageRes = R.drawable.sample_car_1),
-        Car(id = "2", title = "Tesla Model S", mileageKm = 98_000, region = "서울", priceKRW = 100_000_000, imageRes = R.drawable.sample_car_2),
-        Car(id = "3", title = "BMW 530i", mileageKm = 82_300, region = "부산", priceKRW = 63_900_000, imageRes = R.drawable.sample_car_1),
-        Car(id = "4", title = "Hyundai IONIQ 5", mileageKm = 24_500, region = "인천", priceKRW = 49_800_000, imageRes = R.drawable.sample_car_2),
-        Car(id = "5", title = "Ferrari 488", mileageKm = 12_100, region = "서울", priceKRW = 354_000_000, imageRes = R.drawable.sample_car_1),
-        Car(id = "6", title = "Tesla Model 3", mileageKm = 45_700, region = "대구", priceKRW = 52_300_000, imageRes = R.drawable.sample_car_2),
-    )
+        Car("t1","Tesla Model S", 98000,"서울",100_000_000,R.drawable.sample_car_2, brandId="tesla"),
+        Car("t2","Tesla Model 3", 45700,"대구", 52_300_000,R.drawable.sample_car_2, brandId="tesla"),
+        Car("l1","Lamborghini Huracán",12100,"서울",345_000_000,R.drawable.sample_car_1, brandId="lamborghini"),
+        Car("b1","BMW 530i",82300,"부산",63_900_000,R.drawable.sample_car_1, brandId="bmw"),
+        Car("f1","Ferrari-FF",171_614,"서울",138_600_000,R.drawable.sample_car_1, brandId="ferrari"),
+        Car("h1","Hyundai Grandeur 2.5",23_214,"경기",35_900_000,R.drawable.sample_car_2, brandId="hyundai"),
+        )
 
     val brands = listOf(
         Brand("tesla", "Tesla", R.drawable.brand_tesla),
