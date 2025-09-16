@@ -32,7 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import com.autoever.mocar.ui.chat.ChatScreen
 import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
-import com.autoever.mocar.ui.search.SearchScreen
+import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.sell.SellCarScreen
 
 @Composable
@@ -72,7 +72,7 @@ fun MainScreen(rootNavController: NavHostController) {
         ) {
             composable(BottomNavItem.BuyCar.route)  { HomeScreen(navController=rootNavController) }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
-            composable(BottomNavItem.Search.route)  { SearchScreen() }
+            composable(BottomNavItem.Search.route)  { SearchPage() }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen() }
         }
