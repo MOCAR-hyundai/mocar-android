@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -35,7 +36,7 @@ import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.sell.SellCarScreen
 
 @Composable
-fun MainScreen() {
+fun MainScreen(rootNavController: NavHostController) {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavItem.BuyCar,
@@ -69,7 +70,7 @@ fun MainScreen() {
             startDestination = BottomNavItem.BuyCar.route,
             modifier = Modifier.padding(inner)
         ) {
-            composable(BottomNavItem.BuyCar.route)  { HomeScreen() }
+            composable(BottomNavItem.BuyCar.route)  { HomeScreen(navController=rootNavController) }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
             composable(BottomNavItem.Search.route)  { SearchPage() }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }

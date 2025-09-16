@@ -54,6 +54,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -72,30 +73,38 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import carDetailRoute
 import com.autoever.mocar.R
 import com.autoever.mocar.model.Brand
 import com.autoever.mocar.model.Car
 
 // ---------------- 홈스크린 ----------------
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController: NavController) {
     var favorites by remember { mutableStateOf(HomeSampleData.cars) }
+    var selectedBrandId by remember { mutableStateOf<String?>(null) }
+
+    val filtered by remember(selectedBrandId, favorites) {
+        mutableStateOf(
+            if (selectedBrandId == null) favorites
+            else favorites.filter { it.brandId == selectedBrandId }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8F8F8)),
-        contentPadding = PaddingValues(16.dp),          // 기존 padding(16.dp) 대체
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        item { Spacer(Modifier.height(0.dp)) }          // 첫 간격 보정
-
+        // 상단바 / 검색
         item { TopBar(notifications = 2) }
-
         item { SearchBar() }
 
+        // 찜한 목록 캐러셀
         item { SectionHeader("찜한 목록", "Available", "View All") }
-
         item {
             FavoriteCarousel(
                 cars = favorites,
@@ -103,23 +112,64 @@ fun HomeScreen() {
                     favorites = favorites.map {
                         if (it.id == c.id) it.copy(isFavorite = !it.isFavorite) else it
                     }
-                }
+                },
+                onCardClick = { car -> navController.navigate(carDetailRoute(car.id)) }
             )
         }
 
+        // 브랜드 선택
         item {
-            Spacer(Modifier.height(4.dp))
             Text("Brands", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
-            Row {
-                HomeSampleData.brands.forEach { brand ->
-                    BrandChip(brand)
-                    Spacer(Modifier.width(12.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(HomeSampleData.brands, key = { it.id }) { brand ->
+                    BrandChip(
+                        brand = brand,
+                        selected = selectedBrandId == brand.id,
+                        onClick = {
+                            selectedBrandId =
+                                if (selectedBrandId == brand.id) null else brand.id
+                        }
+                    )
                 }
+            }
+        }
+
+        // 필터 결과 헤더
+        item {
+            val title = if (selectedBrandId == null) {
+                "전체 차량"
+            } else {
+                HomeSampleData.brands.firstOrNull { it.id == selectedBrandId }?.name ?: "필터 결과"
+            }
+            SectionHeader(title = title, subtitle = "Available", actionText = if (selectedBrandId != null) "Clear" else null)
+        }
+
+        // 차량 카드 2열 그리드 (중첩 스크롤 없이 안정)
+        items(filtered.chunked(2)) { row ->
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                row.forEach { car ->
+                    Box(Modifier.weight(1f)) {
+                        CarCard(
+                            car = car,
+                            onFavoriteToggle = {
+                                favorites = favorites.map {
+                                    if (it.id == car.id) it.copy(isFavorite = !it.isFavorite) else it
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f)) // 홀수 개 보정
             }
         }
     }
 }
+
 
 // ---------------- TopBar ----------------
 @Composable
@@ -263,7 +313,8 @@ private fun SectionHeader(title: String, subtitle: String? = null, actionText: S
 fun CarCard(
     car: Car,
     onFavoriteToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     OutlinedCard(
         modifier = modifier
@@ -271,7 +322,8 @@ fun CarCard(
             .wrapContentHeight(),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
-        colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
+        colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
+        onClick = { onClick?.invoke() }
     ) {
         Column {
             Box(
@@ -353,13 +405,23 @@ fun formatKrwPretty(amount: Long): String {
 
 // ---------------- BrandChip ----------------
 @Composable
-private fun BrandChip(brand: Brand) {
+private fun BrandChip(
+    brand: Brand,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(Color.White)
+                .border(
+                    width = if (selected) 2.dp else 1.dp,
+                    color = if (selected) Color(0xFF2A5BFF) else Color(0xFFE5E7EB),
+                    shape = CircleShape
+                )
+                .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
             Image(
@@ -369,14 +431,15 @@ private fun BrandChip(brand: Brand) {
             )
         }
         Spacer(Modifier.height(6.dp))
-        Text(brand.name, fontSize = 12.sp)
+        Text(brand.name, fontSize = 12.sp, color = Color.Black)
     }
 }
 
 @Composable
 fun FavoriteCarousel(
     cars: List<Car>,
-    onToggleFav: (Car) -> Unit
+    onToggleFav: (Car) -> Unit,
+    onCardClick: (Car) -> Unit
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -386,7 +449,8 @@ fun FavoriteCarousel(
             CarCard( // 당신이 쓰는 최종 카드 컴포저블 이름
                 car = car,
                 onFavoriteToggle = { onToggleFav(car) },
-                modifier = Modifier.width(260.dp)
+                modifier = Modifier.width(260.dp),
+                onClick = { onCardClick(car) }
             )
         }
     }
