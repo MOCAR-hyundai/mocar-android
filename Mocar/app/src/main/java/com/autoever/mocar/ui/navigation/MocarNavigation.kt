@@ -13,6 +13,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.autoever.mocar.ui.auth.LoginPage
+import com.autoever.mocar.ui.auth.SignUpPage
 import com.autoever.mocar.ui.home.MainScreen
 
 @Composable
@@ -21,28 +23,16 @@ fun MocarNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "auth"
+        startDestination = "login"
     ) {
-        composable("auth") {
-            AuthScreen(navController)
+        composable("login") {
+            LoginPage(navController)
         }
         composable("main") {
             MainScreen()
         }
-    }
-}
-
-@Composable
-private fun AuthScreen(navController: NavHostController) {
-    Column(
-        Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("로그인/회원가입 화면")
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = { navController.navigate("main") }) {
-            Text("메인화면으로")
+        composable("signup") {
+            SignUpPage(navController)
         }
     }
 }
