@@ -1,29 +1,51 @@
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import java.text.NumberFormat
 import java.util.Locale
+//import kotlin.collections.EmptyList.size
+
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.launch
 
 // 데이터 모델
 data class Car(
@@ -286,32 +308,38 @@ fun FilterRowSection(
     }
 }
 
-// 하단 시트 기본 컴포저블
+// Compose의 Partial Bottom Sheet를 사용하는 버전
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheetDialog(
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .background(Color.White)
-                    .padding(vertical = 24.dp, horizontal = 16.dp),
-                content = content
-            )
-        }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false // Partial(중간) 상태 허용
+    )
+    val coroutineScope = rememberCoroutineScope()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        containerColor = Color.White,
+        dragHandle = null // 필요시 드래그 핸들 추가 가능
+    ) {
+        // 시트 내부 컨텐츠
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp, horizontal = 16.dp),
+            content = content
+        )
     }
 }
 
+
 // 범위 선택 모달
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterRangeModal(
     title: String,
@@ -325,36 +353,147 @@ fun FilterRangeModal(
 ) {
     var minVal by remember { mutableFloatStateOf(currentMin) }
     var maxVal by remember { mutableFloatStateOf(currentMax) }
+    val noRipple = remember { MutableInteractionSource() }
+
+    var minInput by remember { mutableStateOf(currentMin.toInt().toString()) }
+    var maxInput by remember { mutableStateOf(currentMax.toInt().toString()) }
+
+    LaunchedEffect(minVal) { minInput = minVal.toInt().toString() }
+    LaunchedEffect(maxVal) { maxInput = maxVal.toInt().toString() }
 
     BottomSheetDialog(onDismiss = onDismiss) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Row {
+                TextButton(onClick = {
+                    minVal = valueRange.start
+                    maxVal = valueRange.endInclusive
+                }) {
+                    Text("초기화")
+                    Icon(Icons.Default.Refresh, contentDescription = "초기화")
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                IconButton(onClick = onDismiss) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = "닫기")
+                }
+            }
+
+        }
+
         Spacer(Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NumberInputField(
+                value = minInput,
+                onValueChange = {
+                    minInput = it
+                    minVal = it.toFloatOrNull()?.coerceIn(valueRange.start, maxVal) ?: minVal
+                },
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("~", fontSize = 16.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.width(8.dp))
+
+            NumberInputField(
+                value = maxInput,
+                onValueChange = {
+                    maxInput = it
+                    maxVal = it.toFloatOrNull()?.coerceIn(minVal, valueRange.endInclusive) ?: maxVal
+                },
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
         RangeSlider(
             value = minVal..maxVal,
-            onValueChange = { range -> minVal = range.start; maxVal = range.endInclusive },
+            onValueChange = { range ->
+                val newMin = range.start.coerceIn(valueRange.start, valueRange.endInclusive)
+                val newMax = range.endInclusive.coerceIn(valueRange.start, valueRange.endInclusive)
+                minVal = newMin
+                maxVal = newMax
+            },
             valueRange = valueRange,
             steps = steps,
             colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF3058EF),
-                activeTrackColor = Color(0xFF3058EF)
-            )
+                activeTrackColor = Color(0xFF3058EF),
+                inactiveTrackColor = Color(0xFFE0E0E0),
+                activeTickColor = Color.Transparent,
+                inactiveTickColor = Color.Transparent
+            ),
+            startThumb = {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.LightGray)
+                        .indication(interactionSource = noRipple, indication = null)
+                )
+            },
+            endThumb = {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.LightGray)
+                        .indication(interactionSource = noRipple, indication = null)
+                )
+            }
         )
+
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("${minVal.toInt()}$unit", fontWeight = FontWeight.Medium)
-            Text("${maxVal.toInt()}$unit", fontWeight = FontWeight.Medium)
-        }
-        Spacer(Modifier.height(24.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onDismiss) { Text("취소") }
-            Spacer(Modifier.width(12.dp))
-            Button(
-                onClick = { onApply(minVal.toInt(), maxVal.toInt()) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3058EF))
-            ) { Text("적용", color = Color.White) }
-        }
+
+        Button(
+            onClick = { onApply(minVal.toInt(), maxVal.toInt()) },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3058EF)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp), // 버튼 높이 조절
+            shape = RoundedCornerShape(6.dp), // 둥근 정도 (기본은 20dp 근처)
+            ) { Text("확인", color = Color.White) }
     }
 }
+
+// ----------------- BasicTextField 기반 숫자 입력 -----------------
+@Composable
+fun NumberInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        BasicTextField(
+            value = value,
+            onValueChange = { onValueChange(it.filter { c -> c.isDigit() }) },
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(color = Color.Black, fontSize = 16.sp),
+            modifier = Modifier
+                .width(160.dp)
+                .background(Color.Transparent)
+                .border(
+                    width = 1.dp,
+                    color = if (isFocused) Color.Gray else Color.LightGray,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .onFocusChanged { isFocused = it.isFocused }
+        )
+    }
+}
+
 
 // 단일 선택 모달
 @Composable
@@ -368,6 +507,15 @@ fun FilterSelectModal(
     var selection by remember { mutableStateOf(selectedOption) }
 
     BottomSheetDialog(onDismiss = onDismiss) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onDismiss) {
+                Icon(imageVector = Icons.Filled.Close, contentDescription = "닫기")
+            }
+        }
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
         options.forEach { option ->
@@ -387,14 +535,19 @@ fun FilterSelectModal(
                 Text(option, fontSize = 16.sp)
             }
         }
-        Spacer(Modifier.height(24.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onDismiss) { Text("취소") }
-            Spacer(Modifier.width(12.dp))
-            Button(
-                onClick = { onApply(selection) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3058EF))
-            ) { Text("적용", color = Color.White) }
+        Spacer(Modifier.height(16.dp))
+        TextButton(onClick = { selection = options.firstOrNull() ?: selection }) { Text("초기화") }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = { onApply(selection) },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3058EF)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp), // 버튼 높이 조절
+            shape = RoundedCornerShape(6.dp), // 둥근 정도 (기본은 20dp 근처)
+            contentPadding = PaddingValues(vertical = 12.dp) // 텍스트와 버튼 사이 패딩
+        ) {
+            Text("확인", color = Color.White, fontSize = 16.sp)
         }
     }
 }
