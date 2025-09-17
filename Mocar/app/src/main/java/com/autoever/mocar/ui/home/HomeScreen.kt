@@ -88,10 +88,10 @@ fun HomeScreen(navController: NavController,
     var favorites by remember { mutableStateOf(HomeSampleData.cars) }
     var selectedBrandId by remember { mutableStateOf<String?>(null) }
 
-    val filtered by remember(selectedBrandId, favorites) {
+    val filtered by remember(selectedBrandId, cars) {
         mutableStateOf(
-            if (selectedBrandId == null) favorites
-            else favorites.filter { it.brandId == selectedBrandId }
+            if (selectedBrandId == null) cars
+            else cars.filter { it.brandId == selectedBrandId }
         )
     }
 
