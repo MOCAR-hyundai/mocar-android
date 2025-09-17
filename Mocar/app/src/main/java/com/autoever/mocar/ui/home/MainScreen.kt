@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -29,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.autoever.mocar.model.Car
 import com.autoever.mocar.ui.chat.ChatScreen
 import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
@@ -36,7 +38,9 @@ import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.sell.SellCarScreen
 
 @Composable
-fun MainScreen(rootNavController: NavHostController) {
+fun MainScreen(rootNavController: NavHostController,
+               cars: List<Car>,
+               onToggleFavorite: (String) -> Unit) {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavItem.BuyCar,
@@ -70,7 +74,13 @@ fun MainScreen(rootNavController: NavHostController) {
             startDestination = BottomNavItem.BuyCar.route,
             modifier = Modifier.padding(inner)
         ) {
-            composable(BottomNavItem.BuyCar.route)  { HomeScreen(navController=rootNavController) }
+            composable(BottomNavItem.BuyCar.route)  {
+                HomeScreen(
+                    navController = rootNavController,
+                    cars = cars,
+                    onToggleFavorite = onToggleFavorite
+                )
+            }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
             composable(BottomNavItem.Search.route)  { SearchPage(navController=rootNavController) }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
@@ -127,9 +137,9 @@ private fun MocarBottomBarPill(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = item.icon,
+                            painter = painterResource(id = item.iconRes),
                             contentDescription = item.label,
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(25.dp),
                             tint = if (selected) Color.White else iconGray
                         )
                         Spacer(Modifier.height(4.dp))

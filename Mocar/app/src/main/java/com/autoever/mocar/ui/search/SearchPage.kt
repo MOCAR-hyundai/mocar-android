@@ -57,11 +57,8 @@ fun SearchPage(navController : NavController) {
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {}) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "뒤로가기"
-                    )
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))

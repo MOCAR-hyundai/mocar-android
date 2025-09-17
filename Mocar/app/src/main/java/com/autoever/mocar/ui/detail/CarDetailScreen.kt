@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -27,9 +28,14 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +52,8 @@ import com.autoever.mocar.ui.home.formatKrwPretty
 @Composable
 fun CarDetailScreen(
     car: Car?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onToggleFavorite: (Car) -> Unit
 ) {
     // car가 null이면 간단히 종료
     if (car == null) {
@@ -56,17 +63,17 @@ fun CarDetailScreen(
         return
     }
 
-    androidx.compose.material3.Scaffold(
+    Scaffold(
         topBar = {
             DetailTopBar(
-                plateNo = "21나 4817",           // TODO: 실제 데이터 매핑
+                plateNo = car.plateNo,
                 onBack = onBack,
                 onMore = { /* TODO */ }
             )
         },
         bottomBar = {
             BottomActionBar(
-                priceRange = "4,254~5,180만원",
+                priceRange = formatKrwPretty(car.priceKRW),
                 onChat = { /* TODO: 채팅 이동 */ },
                 onBuy = { /* TODO: 구매 플로우 */ }
             )
@@ -86,7 +93,6 @@ fun CarDetailScreen(
                         .fillMaxWidth()
                         .height(260.dp)
                         .background(Color.White)
-//                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(
@@ -98,12 +104,16 @@ fun CarDetailScreen(
                         Spacer(Modifier.height(8.dp))
                         DotsIndicator(total = 4, selected = 1)
                     }
+                    var isFav by remember { mutableStateOf(car.isFavorite) }
                     HeartButton(
-                        isFavorite = car.isFavorite,
-                        onClick = { /* TODO: toggle */ },
+                        isFavorite = isFav,
+                        onClick = {
+                            isFav = !isFav
+                            onToggleFavorite(car.copy(isFavorite = isFav))
+                        },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(4.dp)
+                            .padding(12.dp)
                     )
                 }
             }
@@ -112,12 +122,12 @@ fun CarDetailScreen(
             item {
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        "현대 뉴 그랜저드 하이브리드 2.4 캘리그래피",
+                        car.title,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "22년 12월(23년형) · ${String.format("%,d", car.mileageKm)}km · 하이브리드(가솔린) · ${car.region}",
+                        "${car.yearDesc} · ${String.format("%,d", car.mileageKm)}km · ${car.fuel} · ${car.region}", // ✅ 실제 데이터
                         color = Color(0xFF6B7280),
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -144,13 +154,13 @@ fun CarDetailScreen(
             // 기본 정보
             item {
                 SectionCard(title = "기본 정보") {
-                    InfoRow("차량번호", "21나4827")
-                    InfoRow("연식", "22년12월(23년형)")
+                    InfoRow("차량번호", car.plateNo)
+                    InfoRow("연식", car.yearDesc)
                     InfoRow("주행거리", "${String.format("%,d", car.mileageKm)}km")
-                    InfoRow("변속기", "오토")
-                    InfoRow("차종", "대형")
-                    InfoRow("배기량", "0cc")
-                    InfoRow("연료", "하이브리드(가솔린)")
+                    InfoRow("변속기", car.transmission)
+                    InfoRow("차종", car.carType)
+                    InfoRow("배기량", "${car.displacement}cc")
+                    InfoRow("연료", car.fuel)
                 }
             }
 
@@ -189,6 +199,7 @@ private fun DetailTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .height(56.dp)
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -221,20 +232,16 @@ private fun HeartButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.size(40.dp),
-        shape = CircleShape,
-        color = Color.White,
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, Color(0xFFE5E7EB))
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(40.dp) // 터치 영역
     ) {
-        IconButton(onClick = onClick) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = "찜",
-                tint = Color(0xFF111827)
-            )
-        }
+        Icon(
+            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+            contentDescription = "찜",
+            tint = Color.Black, // 항상 검정색
+            modifier = Modifier.size(28.dp)
+        )
     }
 }
 
