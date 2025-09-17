@@ -82,7 +82,7 @@ fun ModelSelect(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .height(60.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
@@ -118,13 +118,5 @@ fun ModelRow(
             fontSize = 14.sp,
             color = Color.Gray
         )
-        if (selected) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = Color(0xFF3058EF),
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
     }
 }
