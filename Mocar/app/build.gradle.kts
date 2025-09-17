@@ -40,8 +40,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation(libs.androidx.navigation.compose)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -59,4 +58,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("androidx.compose.material:material-icons-extended:1.6.7")
     implementation("androidx.navigation:navigation-compose:2.9.4")
+    implementation("androidx.compose.material:material:1.9.1")
 }

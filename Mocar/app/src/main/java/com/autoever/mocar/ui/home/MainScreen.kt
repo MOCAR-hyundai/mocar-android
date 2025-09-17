@@ -72,7 +72,7 @@ fun MainScreen(rootNavController: NavHostController) {
         ) {
             composable(BottomNavItem.BuyCar.route)  { HomeScreen(navController=rootNavController) }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
-            composable(BottomNavItem.Search.route)  { SearchPage() }
+            composable(BottomNavItem.Search.route)  { SearchPage(navController = rootNavController) }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen() }
         }
