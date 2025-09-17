@@ -74,7 +74,17 @@ fun MainScreen(rootNavController: NavHostController) {
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
             composable(BottomNavItem.Search.route)  { SearchPage(navController = rootNavController) }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
-            composable(BottomNavItem.MyPage.route)  { MyPageScreen() }
+            composable(BottomNavItem.MyPage.route)  { MyPageScreen(
+                userName = "홍길동",
+                userEmail = "hong@domain.com",
+                profileImageUrl = null,
+                onEditProfileClick = {},
+                onWishListClick = {},
+                onPurchaseListClick = {},
+                onRegisterListClick = {},
+                onSettingsClick = {},
+                onLogoutClick = {}
+            ) }
         }
     }
 }
