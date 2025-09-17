@@ -1,4 +1,5 @@
 package com.autoever.mocar.ui.search
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -26,11 +27,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchPage() {
+fun SearchPage(navController : NavController) {
     var searchText by remember { mutableStateOf("") }
     var selectedMenu by remember { mutableStateOf("제조사") }
 
@@ -44,21 +47,18 @@ fun SearchPage() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9F9F9))
+                .background(Color(0xFFF8F8F8))
                 .padding(innerPadding)
         ) {
             // 상단 검색창
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 20.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {}) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "뒤로가기"
-                    )
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -93,11 +93,13 @@ fun SearchPage() {
 
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedMenu) {
-                        "제조사" -> Manufacturer("")
+                        "제조사" -> Manufacturer(navController = navController, "")
                         "가격" -> Price()
-                        "연식" -> Price()
-                        "주행거리" -> Price()
-                        // ...
+                        "연식" -> Year()
+                        "주행거리" -> Mileage()
+                        "차종" -> CarType()
+                        "연료" -> Fuel()
+                        "지역" -> Region()
                     }
                 }
             }
@@ -163,9 +165,11 @@ fun BottomButtons() {
             ),
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier.weight(1f)
-                .height(50.dp)
+                .height(60.dp)
         ) {
-            Text("초기화")
+            Text(text = "초기화",
+                fontSize = 16.sp
+            )
         }
 
         Spacer(Modifier.width(8.dp))
@@ -178,9 +182,12 @@ fun BottomButtons() {
             ),
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier.weight(2f)
-                .height(50.dp)
+                .height(60.dp)
         ) {
-            Text("2,536대 보기")
+            Text(
+                text = "2,536대 보기",
+                fontSize = 16.sp,
+            )
         }
     }
 }

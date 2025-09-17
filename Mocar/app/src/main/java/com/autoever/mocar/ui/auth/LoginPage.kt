@@ -1,7 +1,10 @@
 package com.autoever.mocar.ui.auth
 
+import android.util.Log
+import android.widget.Toast
 import com.autoever.mocar.R
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,10 +26,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
@@ -35,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavHostController
+import com.google.firebase.auth.FirebaseAuth
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +50,11 @@ fun LoginPage(navController: NavHostController) {
     var password by remember { mutableStateOf("") }
     val passwordVisible = remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+
     Scaffold(
+        containerColor = Color(0xFFF8F8F8),
         modifier = Modifier.fillMaxWidth()
             .padding(top = 20.dp),
         topBar = {
@@ -58,6 +68,9 @@ fun LoginPage(navController: NavHostController) {
                             .height(60.dp)
                     )
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFF8F8F8)
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
         },
@@ -66,6 +79,7 @@ fun LoginPage(navController: NavHostController) {
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
+                .background(Color(0xFFF8F8F8))
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -173,7 +187,20 @@ fun LoginPage(navController: NavHostController) {
 
             Button(
                 onClick = {
-                    navController.navigate("main")
+                    if (email.isBlank() || password.isBlank()) {
+                        Toast.makeText(context, "이메일과 비밀번호를 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    auth.signInWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                navController.navigate("main")
+                            } else {
+                                Log.e("LoginError", "로그인 실패", task.exception)
+                                Toast.makeText(context, "로그인 실패: 이메일 또는 비밀번호를 확인하세요.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -183,7 +210,9 @@ fun LoginPage(navController: NavHostController) {
                     contentColor = Color.White     // 텍스트 색상
                 ),
             ) {
-                Text(text = "로그인")
+                Text(text = "로그인",
+                    fontSize = 16.sp
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -191,7 +220,7 @@ fun LoginPage(navController: NavHostController) {
             Text(
                 text = "계정이 없으신가요? 회원가입",
                 modifier = Modifier
-                    .padding(bottom = 20.dp)
+                    .padding(bottom = 35.dp)
                     .clickable {
                         navController.navigate("signup")
                     },
