@@ -78,10 +78,13 @@ import carDetailRoute
 import com.autoever.mocar.R
 import com.autoever.mocar.model.Brand
 import com.autoever.mocar.model.Car
+import com.autoever.mocar.ui.home.HomeSampleData.cars
 
 // ---------------- 홈스크린 ----------------
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController,
+               cars: List<Car>,
+               onToggleFavorite: (String) -> Unit) {
     var favorites by remember { mutableStateOf(HomeSampleData.cars) }
     var selectedBrandId by remember { mutableStateOf<String?>(null) }
 
@@ -107,12 +110,8 @@ fun HomeScreen(navController: NavController) {
         item { SectionHeader("찜한 목록", "Available", "View All") }
         item {
             FavoriteCarousel(
-                cars = favorites,
-                onToggleFav = { c ->
-                    favorites = favorites.map {
-                        if (it.id == c.id) it.copy(isFavorite = !it.isFavorite) else it
-                    }
-                },
+                cars = cars.filter { it.isFavorite },
+                onToggleFav = { c -> onToggleFavorite(c.id) },
                 onCardClick = { car -> navController.navigate(carDetailRoute(car.id)) }
             )
         }
@@ -145,7 +144,7 @@ fun HomeScreen(navController: NavController) {
             SectionHeader(title = title, subtitle = "Available", actionText = if (selectedBrandId != null) "Clear" else null)
         }
 
-        // 차량 카드 2열 그리드 (중첩 스크롤 없이 안정)
+        // 차량 카드 2열 그리드
         items(filtered.chunked(2)) { row ->
             Row(
                 Modifier.fillMaxWidth(),
@@ -155,12 +154,11 @@ fun HomeScreen(navController: NavController) {
                     Box(Modifier.weight(1f)) {
                         CarCard(
                             car = car,
-                            onFavoriteToggle = {
-                                favorites = favorites.map {
-                                    if (it.id == car.id) it.copy(isFavorite = !it.isFavorite) else it
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                            onFavoriteToggle = { onToggleFavorite(car.id) },
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                navController.navigate(carDetailRoute(car.id))
+                            }
                         )
                     }
                 }
