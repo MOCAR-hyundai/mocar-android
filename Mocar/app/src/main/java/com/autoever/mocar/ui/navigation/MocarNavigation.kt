@@ -25,6 +25,7 @@ import com.autoever.mocar.ui.auth.LoginPage
 import com.autoever.mocar.ui.auth.SignUpPage
 import com.autoever.mocar.ui.home.HomeSampleData.cars
 import com.autoever.mocar.ui.home.MainScreen
+import com.autoever.mocar.ui.search.ModelSelect
 
 // ----- Routes -----
 const val ROUTE_AUTH = "auth"
@@ -74,5 +75,17 @@ fun MocarNavigation() {
         composable("signup") {
             SignUpPage(navController)
         }
+        composable("modelSelect") {
+            ModelSelect(
+                onBack = { navController.popBackStack() },
+                onConfirm = { selectedModels ->
+                    println("선택된 모델: $selectedModels")
+                    navController.popBackStack()
+                }
+            )
+        }
+
+
+
     }
 }

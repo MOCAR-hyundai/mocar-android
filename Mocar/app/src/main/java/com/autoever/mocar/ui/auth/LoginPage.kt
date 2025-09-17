@@ -2,6 +2,7 @@ package com.autoever.mocar.ui.auth
 
 import com.autoever.mocar.R
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +47,7 @@ fun LoginPage(navController: NavHostController) {
     val passwordVisible = remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = Color(0xFFF8F8F8),
         modifier = Modifier.fillMaxWidth()
             .padding(top = 20.dp),
         topBar = {
@@ -58,6 +61,9 @@ fun LoginPage(navController: NavHostController) {
                             .height(60.dp)
                     )
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFF8F8F8)
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
         },
@@ -66,6 +72,7 @@ fun LoginPage(navController: NavHostController) {
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
+                .background(Color(0xFFF8F8F8))
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -183,7 +190,9 @@ fun LoginPage(navController: NavHostController) {
                     contentColor = Color.White     // 텍스트 색상
                 ),
             ) {
-                Text(text = "로그인")
+                Text(text = "로그인",
+                    fontSize = 16.sp
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -191,7 +200,7 @@ fun LoginPage(navController: NavHostController) {
             Text(
                 text = "계정이 없으신가요? 회원가입",
                 modifier = Modifier
-                    .padding(bottom = 20.dp)
+                    .padding(bottom = 35.dp)
                     .clickable {
                         navController.navigate("signup")
                     },

@@ -1,6 +1,7 @@
 package com.autoever.mocar.ui.auth
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import com.autoever.mocar.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +44,7 @@ fun SignUpPage(navController: NavHostController) {
     val passwordVisible = remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = Color(0xFFF8F8F8),
         modifier = Modifier.fillMaxWidth()
             .padding(top = 20.dp),
         topBar = {
@@ -55,6 +58,9 @@ fun SignUpPage(navController: NavHostController) {
                             .height(60.dp)
                     )
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFF8F8F8)
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
         },
@@ -63,7 +69,8 @@ fun SignUpPage(navController: NavHostController) {
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(16.dp)
+                .background(Color(0xFFF8F8F8)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -220,7 +227,7 @@ fun SignUpPage(navController: NavHostController) {
             // 버튼 (동작 없음)
             Button(
                 onClick = {
-
+                    navController.navigate("auth")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -230,7 +237,10 @@ fun SignUpPage(navController: NavHostController) {
                     contentColor = Color.White     // 텍스트 색상
                 ),
             ) {
-                Text(text = "회원가입")
+                Text(
+                    text = "회원가입",
+                    fontSize = 16.sp
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -238,10 +248,10 @@ fun SignUpPage(navController: NavHostController) {
             Text(
                 text = "이미 계정이 있으신가요? 로그인",
                 modifier = Modifier
+                    .padding(bottom = 20.dp)
                     .clickable {
-                        navController.navigate("login")
-                    }
-                    .padding(20.dp),
+                        navController.navigate("auth")
+                    },
                 color = Color.Gray,
                 textAlign = TextAlign.Center
             )
