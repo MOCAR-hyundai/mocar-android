@@ -1,10 +1,12 @@
 package com.autoever.mocar.ui.home
 
+import ROUTE_SEARCH
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -104,7 +106,10 @@ fun HomeScreen(navController: NavController,
     ) {
         // 상단바 / 검색
         item { TopBar(notifications = 2) }
-        item { SearchBar() }
+        item { SearchBar(
+            onClickBar   = { navController.navigate(ROUTE_SEARCH) },
+            onClickFilter = { navController.navigate(ROUTE_SEARCH) }
+        ) }
 
         // 찜한 목록 캐러셀
         item { SectionHeader("찜한 목록", "Available", "View All") }
@@ -211,20 +216,6 @@ fun TopBar(notifications: Int = 0) {
                     }
                 }
             }
-
-            Surface(
-                shape = CircleShape,
-                color = Color.White,
-                tonalElevation = 1.dp
-            ) {
-                IconButton(onClick = { }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "더보기",
-                        tint = Color.Black
-                    )
-                }
-            }
         }
     }
 }
@@ -234,52 +225,66 @@ fun TopBar(notifications: Int = 0) {
 fun SearchBar(
     value: String = "",
     onValueChange: (String) -> Unit = {},
-    onClickFilter: () -> Unit = {}
+    onClickFilter: () -> Unit = {},
+    onClickBar: () -> Unit = {}
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        // 입력창
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
+
+        Box(
             modifier = Modifier
                 .weight(1f)
-                .height(56.dp),
-            singleLine = true,
-            placeholder = { Text("어떤 차를 찾으시나요?") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                    tint = Color(0xFF6B7280)
+                .height(56.dp)
+        ) {
+            // 모양은 그대로 유지
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                readOnly = true,                      // ← 입력 막기 (비주얼은 그대로)
+                modifier = Modifier
+                    .matchParentSize(),               // 박스에 맞춤
+                singleLine = true,
+                placeholder = { Text("어떤 차를 찾으시나요?") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = Color(0xFF6B7280)
+                    )
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor   = Color.White,
+                    unfocusedBorderColor    = Color(0xFFE5E7EB),
+                    focusedBorderColor      = Color(0xFFE5E7EB),
+                    unfocusedTextColor      = Color(0xFF111827),
+                    focusedTextColor        = Color(0xFF111827),
+                    unfocusedPlaceholderColor = Color(0xFF9CA3AF),
+                    focusedPlaceholderColor   = Color(0xFF9CA3AF),
+                    cursorColor             = Color(0xFF2A5BFF)
                 )
-            },
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                // 컨테이너: 흰색
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor   = Color.White,
-                // 테두리: 연회색 고정 (밑줄 없음)
-                unfocusedBorderColor    = Color(0xFFE5E7EB),
-                focusedBorderColor      = Color(0xFFE5E7EB),
-                // 텍스트/플레이스홀더 색
-                unfocusedTextColor      = Color(0xFF111827),
-                focusedTextColor        = Color(0xFF111827),
-                unfocusedPlaceholderColor = Color(0xFF9CA3AF),
-                focusedPlaceholderColor   = Color(0xFF9CA3AF),
-                cursorColor             = Color(0xFF2A5BFF)  // 브랜드 블루
             )
-        )
+
+            // 전체 영역 클릭 오버레이
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { onClickBar() }
+            )
+        }
 
         Spacer(Modifier.width(12.dp))
 
-        // 필터 버튼 (파란 사각, 16dp 라운드, 흰 아이콘)
         FilledIconButton(
             onClick = onClickFilter,
             modifier = Modifier.size(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = Color(0xFF2A5BFF),   // 브랜드 블루
+                containerColor = Color(0xFF2A5BFF),
                 contentColor   = Color.White
             )
         ) {

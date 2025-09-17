@@ -26,11 +26,13 @@ import com.autoever.mocar.ui.auth.SignUpPage
 import com.autoever.mocar.ui.home.HomeSampleData.cars
 import com.autoever.mocar.ui.home.MainScreen
 import com.autoever.mocar.ui.search.ModelSelect
+import com.autoever.mocar.ui.search.SearchPage
 
 // ----- Routes -----
 const val ROUTE_AUTH = "auth"
 const val ROUTE_MAIN = "main"
 const val ROUTE_CAR_DETAIL = "carDetail"
+const val ROUTE_SEARCH = "search"
 fun carDetailRoute(carId: String) = "$ROUTE_CAR_DETAIL/$carId"
 
 @Composable
@@ -56,6 +58,9 @@ fun MocarNavigation() {
                 cars = cars,
                 onToggleFavorite = toggleFavorite)
         }
+        composable(ROUTE_SEARCH) {
+            SearchPage(navController)
+        }
         // 차량 상세
         composable(
             route = "$ROUTE_CAR_DETAIL/{carId}",
@@ -67,7 +72,6 @@ fun MocarNavigation() {
                 car = car,
                 onBack = { navController.popBackStack() },
                 onToggleFavorite = { updated ->
-                    // updated.isFavorite 를 반영
                     toggleFavorite(updated.id)
                 }
             )
