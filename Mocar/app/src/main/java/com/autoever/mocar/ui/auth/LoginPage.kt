@@ -1,5 +1,6 @@
 package com.autoever.mocar.ui.auth
 
+import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import com.autoever.mocar.R
@@ -49,9 +50,24 @@ fun LoginPage(navController: NavHostController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val passwordVisible = remember { mutableStateOf(false) }
+    var keepLoggedIn by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    val user = auth.currentUser
+
+    // 로그인 확인
+    LaunchedEffect(Unit) {
+        val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+        val savedKeepLoggedIn = sharedPref.getBoolean("keepLoggedIn", false)
+
+        if (user != null && savedKeepLoggedIn) {
+            navController.navigate("main") {
+                popUpTo("auth") { inclusive = true } // 뒤로가기 막기
+            }
+        }
+    }
+
 
     Scaffold(
         containerColor = Color(0xFFF8F8F8),
@@ -164,13 +180,11 @@ fun LoginPage(navController: NavHostController) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    var keepLoggedIn by remember { mutableStateOf(false) }
-
                     Checkbox(
                         checked = keepLoggedIn,
                         onCheckedChange = { keepLoggedIn = it },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Color.Black
+                            checkedColor = Color(0xFF3058EF)
                         ),
                     )
                     Text(text = "로그인 상태 유지")
@@ -195,7 +209,13 @@ fun LoginPage(navController: NavHostController) {
                     auth.signInWithEmailAndPassword(email, password)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                navController.navigate("main")
+                                val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+                                sharedPref.edit().putBoolean("keepLoggedIn", keepLoggedIn).apply()
+
+                                navController.navigate("main") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+
                             } else {
                                 Log.e("LoginError", "로그인 실패", task.exception)
                                 Toast.makeText(context, "로그인 실패: 이메일 또는 비밀번호를 확인하세요.", Toast.LENGTH_SHORT).show()
@@ -217,16 +237,25 @@ fun LoginPage(navController: NavHostController) {
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Text(
-                text = "계정이 없으신가요? 회원가입",
+            Row(
                 modifier = Modifier
                     .padding(bottom = 35.dp)
-                    .clickable {
-                        navController.navigate("signup")
-                    },
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
+            ) {
+                Text(
+                    text = "계정이 없으신가요? ",
+                    color = Color.Gray
+                    )
+
+                Text(
+                    text = "회원가입",
+                    modifier = Modifier
+                        .clickable {
+                            navController.navigate("signup")
+                        },
+                    color = Color(0xFF3058EF)
+                )
+            }
+
         }
     }
 }

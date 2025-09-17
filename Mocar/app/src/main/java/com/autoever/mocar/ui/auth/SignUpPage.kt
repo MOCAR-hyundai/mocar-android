@@ -39,6 +39,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import android.app.DatePickerDialog
 import android.util.Patterns
 import android.widget.Toast
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.ui.platform.LocalContext
 import java.util.Calendar
 import java.text.SimpleDateFormat
@@ -54,24 +55,27 @@ fun SignUpPage(navController: NavHostController) {
     var birthday by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     val passwordVisible = remember { mutableStateOf(false) }
+    val passwordCheckVisible = remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val calendar = remember { Calendar.getInstance() }
+    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.KOREA) }
+    // 달력 클릭 시 DatePickerDialog 표시
 
-// 날짜 선택 Dialog 띄우기
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, dayOfMonth ->
-            val selectedDate = Calendar.getInstance().apply {
-                set(year, month, dayOfMonth)
-            }
-            val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA)
-            birthday = formatter.format(selectedDate.time)  // ← yyyy-MM-dd 형식으로 birthday 값 설정
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
+    val datePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val selectedDate = Calendar.getInstance().apply {
+                    set(year, month, dayOfMonth)
+                }
+                birthday = dateFormat.format(selectedDate.time)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
 
 
     Scaffold(
@@ -149,7 +153,7 @@ fun SignUpPage(navController: NavHostController) {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                placeholder = { Text("********") },
+                placeholder = { Text("비밀번호") },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if(passwordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -186,18 +190,18 @@ fun SignUpPage(navController: NavHostController) {
             OutlinedTextField(
                 value = passwordCheck,
                 onValueChange = { passwordCheck = it },
-                placeholder = { Text("********") },
+                placeholder = { Text("비밀번호 확인") },
                 modifier = Modifier.fillMaxWidth(),
-                visualTransformation = if(passwordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
+                visualTransformation = if(passwordCheckVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(
                         onClick = {
-                            passwordVisible.value = !passwordVisible.value
+                            passwordCheckVisible.value = !passwordCheckVisible.value
                         }
                     ) {
                         Icon(
                             imageVector =
-                                if(passwordVisible.value) Icons.Default.Visibility
+                                if(passwordCheckVisible.value) Icons.Default.Visibility
                                 else Icons.Default.VisibilityOff,
                             contentDescription = "비밀번호 보이기"
                         )
@@ -222,20 +226,27 @@ fun SignUpPage(navController: NavHostController) {
             )
             OutlinedTextField(
                 value = birthday,
-                onValueChange = { /* 날짜는 직접 수정하지 못하게 막음 */ },
+                onValueChange = {
+                    if (it.matches(Regex("^\\d{0,4}-?\\d{0,2}-?\\d{0,2}$"))) {
+                        birthday = it
+                    }
+                },
                 placeholder = { Text("YYYY-MM-DD") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { datePickerDialog.show() },  // ← 클릭 시 달력 띄움
-                enabled = false,  // 텍스트 직접 입력 비활성화
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
+                leadingIcon = {
+                    IconButton(onClick = { datePickerDialog.show() }) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = "달력 열기"
+                        )
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = Color.Black,
-                    disabledBorderColor = Color.Gray,
-                    disabledLabelColor = Color.Gray,
-                    disabledPlaceholderColor = Color.Gray,
-                    disabledContainerColor = Color.Transparent
-                )
+                    focusedBorderColor = Color(0xFF3058EF),
+                    unfocusedBorderColor = Color.Gray
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -332,17 +343,24 @@ fun SignUpPage(navController: NavHostController) {
             }
 
             Spacer(modifier = Modifier.weight(1f))
-
-            Text(
-                text = "이미 계정이 있으신가요? 로그인",
+            Row(
                 modifier = Modifier
                     .padding(bottom = 20.dp)
-                    .clickable {
-                        navController.navigate("auth")
-                    },
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
+            ) {
+                Text(
+                    text = "이미 계정이 있으신가요? ",
+                    color = Color.Gray
+                )
+
+                Text(
+                    text = "로그인",
+                    modifier = Modifier
+                        .clickable {
+                            navController.navigate("auth")
+                        },
+                    color = Color(0xFF3058EF)
+                )
+            }
         }
     }
 }
