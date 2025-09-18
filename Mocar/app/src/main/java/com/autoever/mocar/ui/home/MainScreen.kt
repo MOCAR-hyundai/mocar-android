@@ -82,7 +82,12 @@ fun MainScreen(rootNavController: NavHostController,
                 )
             }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
-            composable(BottomNavItem.Search.route)  { SearchPage(navController=rootNavController) }
+            composable(BottomNavItem.Search.route)  {
+                SearchPage(
+                    navController=rootNavController,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 userName = "홍길동",
