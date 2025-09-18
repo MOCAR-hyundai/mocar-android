@@ -23,21 +23,29 @@ import com.autoever.mocar.R
 @Composable
 fun ModelSelect(
     brandName: String,
+    allListings: List<ListingData>,
     onBack: () -> Unit = {},
     onConfirm: (List<String>) -> Unit = {}
 ) {
-    val exampleModels = listOf(
-        "그랜저" to 8354,
-        "포터" to 6911,
-        "아반떼" to 5543,
-        "쏘나타" to 4625,
-        "싼타페" to 4272,
-        "i30" to 363,
-        "i40" to 254,
-        "ST1" to 3,
-        "갤로퍼" to 44,
-        "그라나다" to 0,
-    )
+//    val exampleModels = listOf(
+//        "그랜저" to 8354,
+//        "포터" to 6911,
+//        "아반떼" to 5543,
+//        "쏘나타" to 4625,
+//        "싼타페" to 4272,
+//        "i30" to 363,
+//        "i40" to 254,
+//        "ST1" to 3,
+//        "갤로퍼" to 44,
+//        "그라나다" to 0,
+//    )
+
+    val filteredModels = allListings
+        .filter { it.brand == brandName }
+        .groupBy { it.model }
+        .map { (model, items) -> model to items.size }
+        .sortedByDescending { it.second } // 개수 기준 정렬 (선택사항)
+
 
     var selectedModel by remember { mutableStateOf<String?>(null) }
 
@@ -71,9 +79,29 @@ fun ModelSelect(
 
         // 전체 모델 리스트
 
-        LazyColumn () {
-            items(exampleModels.size) { index ->
-                val (model, count) = exampleModels[index]
+//        LazyColumn () {
+//            items(exampleModels.size) { index ->
+//                val (model, count) = exampleModels[index]
+//                ModelRow(
+//                    name = model,
+//                    count = count,
+//                    selected = selectedModel == model,
+//                    onSelect = {
+//                        selectedModel = model
+//                    }
+//                )
+//                if (index < exampleModels.size - 1) {
+//                    HorizontalDivider(
+//                        color = Color(0xFFE0E0E0),
+//                        thickness = 0.7.dp,
+//                        modifier = Modifier.padding(horizontal = 8.dp)
+//                    )
+//                }
+//            }
+//        }
+        LazyColumn {
+            items(filteredModels.size) { index ->
+                val (model, count) = filteredModels[index]
                 ModelRow(
                     name = model,
                     count = count,
@@ -82,7 +110,7 @@ fun ModelSelect(
                         selectedModel = model
                     }
                 )
-                if (index < exampleModels.size - 1) {
+                if (index < filteredModels.size - 1) {
                     HorizontalDivider(
                         color = Color(0xFFE0E0E0),
                         thickness = 0.7.dp,
@@ -91,6 +119,7 @@ fun ModelSelect(
                 }
             }
         }
+
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -183,6 +212,7 @@ fun ModelRow(
 @Composable
 fun ModelSelectBottomSheet(
     brandName: String,
+    allListings: List<ListingData>,
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit
 ) {
@@ -193,6 +223,7 @@ fun ModelSelectBottomSheet(
     ) {
         ModelSelect(
             brandName = brandName,
+            allListings = allListings,
             onBack = onDismiss,
             onConfirm = {
                 onConfirm(it)

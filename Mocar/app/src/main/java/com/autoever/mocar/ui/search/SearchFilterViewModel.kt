@@ -1,6 +1,8 @@
 package com.autoever.mocar.ui.search
 
 import androidx.lifecycle.ViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -57,4 +59,51 @@ class SearchFilterViewModel : ViewModel() {
     fun resetAllFilters() {
         _filterState.value = SearchFilterState()
     }
+}
+
+data class ListingData(
+    val brand: String = "",
+    val images: List<String> = emptyList(), // ✅ 반드시 이렇게 있어야 함
+    val model: String = "",
+    val fuel: String = "",
+    val carType: String = "",
+    val region: String = "",
+    // 기타 필드들...
+)
+
+
+class ListingViewModel : ViewModel() {
+
+    private val db = Firebase.firestore
+    private val _listings = MutableStateFlow<List<ListingData>>(emptyList())
+    val listings: StateFlow<List<ListingData>> = _listings
+
+    init {
+        fetchListings()
+    }
+
+    private fun fetchListings() {
+        db.collection("listings").get()
+            .addOnSuccessListener { result ->
+                val parsed = result.mapNotNull { doc ->
+                    val brand = doc.getString("brand") ?: return@mapNotNull null
+                    val model = doc.getString("model") ?: return@mapNotNull null
+                    val carType = doc.getString("carType") ?: return@mapNotNull null
+                    val fuel = doc.getString("fuel") ?: return@mapNotNull null
+                    val region = doc.getString("region") ?: return@mapNotNull null
+                    val imageList = doc.get("images") as? List<String> ?: emptyList()
+
+                    ListingData(
+                        brand = brand,
+                        images = imageList, // ✅ 여기
+                        model = model,
+                        fuel = fuel,
+                        carType = carType,
+                        region = region
+                    )
+                }
+                _listings.value = parsed
+            }
+    }
+
 }

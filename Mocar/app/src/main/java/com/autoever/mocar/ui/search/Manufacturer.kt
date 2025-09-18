@@ -19,6 +19,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,37 +27,51 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.autoever.mocar.R
 
 data class carDatas(
     val name: String,
     val count: Int,
-    val imageRes: Int
+    val imageRes: String,
+    val isKorean: Boolean
 )
 
+fun isKoreanBrand(brand: String): Boolean {
+    return brand.any { it in '가'..'힣' } // 한글 포함 여부로 판단
+}
+
+fun String.isKorean(): Boolean {
+    return this.any { it in '가'..'힣' }
+}
+
+fun List<ListingData>.toBrandMap(): List<carDatas> {
+    return this.groupBy { it.brand }
+        .map { (brand, items) ->
+            val count = items.size
+            val imageUrl = items.firstOrNull()?.images?.firstOrNull().orEmpty() // ✅ 올바르게 수정
+            carDatas(
+                name = brand,
+                count = count,
+                imageRes = imageUrl,
+                isKorean = brand.isKorean()
+            )
+        }
+}
+
+
 @Composable
-fun Manufacturer(navController: NavController, searchQuery: String) {
+fun Manufacturer(navController: NavController, searchQuery: String, viewModel: ListingViewModel = viewModel()) {
 
-    val korCars = listOf(
-        carDatas("현대", 14325, R.drawable.brand_hyundai),
-        carDatas("기아", 23426, R.drawable.brand_kia),
-        carDatas("제네시스", 1234, R.drawable.brand_genesis),
-        carDatas("쉐보레", 3453, R.drawable.brand_chevrolet),
-        carDatas("르노코리아", 45, R.drawable.brand_renault)
-    )
-
-    val forCars = listOf(
-        carDatas("BMW", 1598, R.drawable.brand_bmw),
-        carDatas("벤츠", 3457, R.drawable.brand_benz),
-        carDatas("아우디", 12345, R.drawable.brand_audi),
-        carDatas("테슬라", 12351, R.drawable.brand_tesla),
-        carDatas("페라리", 23456, R.drawable.brand_ferrari)
-    )
+    val listings by viewModel.listings.collectAsState()
+    val allBrands = listings.toBrandMap()
 
     var selectedBrand by remember { mutableStateOf<String?>(null) }
     var selectedModel by remember { mutableStateOf<String?>(null) }
@@ -66,6 +81,7 @@ fun Manufacturer(navController: NavController, searchQuery: String) {
     if (showModelSheet && selectedBrand != null) {
         ModelSelectBottomSheet(
             brandName = selectedBrand!!,
+            allListings = listings,
             onDismiss = { showModelSheet = false },
             onConfirm = {
                 selectedModel = it.firstOrNull()
@@ -92,19 +108,22 @@ fun Manufacturer(navController: NavController, searchQuery: String) {
         )
     } else {
         // 제조사 리스트 보여주기
+        val koreanBrands = allBrands.filter { it.isKorean }
+        val foreignBrands = allBrands.filterNot { it.isKorean }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 10.dp)
         ) {
             item { CategoryLabel("국산차") }
-            items(korCars.size) { index ->
-                val (name, count, imageRes)  = korCars[index]
-                ManufacturerCard(name, count, imageRes) {
+            items(koreanBrands.size) { index ->
+                val (name, count, imageUrl) = koreanBrands[index]
+                ManufacturerCard(name, count, imageUrl) {
                     selectedBrand = name
                     showModelSheet = true
                 }
-                if (index < korCars.size - 1) {
+                if (index < koreanBrands.size - 1) {
                     HorizontalDivider(
                         color = Color(0xFFE0E0E0),
                         thickness = 0.7.dp,
@@ -114,13 +133,13 @@ fun Manufacturer(navController: NavController, searchQuery: String) {
             }
 
             item { CategoryLabel("수입차") }
-            items(forCars.size) { index ->
-                val (name, count, imageRes)  = korCars[index]
-                ManufacturerCard(name, count, imageRes) {
+            items(foreignBrands.size) { index ->
+                val (name, count, imageUrl) = foreignBrands[index]
+                ManufacturerCard(name, count, imageUrl) {
                     selectedBrand = name
                     showModelSheet = true
                 }
-                if (index < forCars.size - 1) {
+                if (index < foreignBrands.size - 1) {
                     HorizontalDivider(
                         color = Color(0xFFE0E0E0),
                         thickness = 0.7.dp,
@@ -129,6 +148,7 @@ fun Manufacturer(navController: NavController, searchQuery: String) {
                 }
             }
         }
+
     }
 }
 
@@ -163,7 +183,7 @@ fun CategoryLabel(text: String) {
 fun ManufacturerCard(
     name: String,
     count: Int,
-    imageRes: Int,
+    imageRes: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -185,13 +205,44 @@ fun ManufacturerCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
+//                AsyncImage(
+//                    model = imageRes,
+//                    contentDescription = "$name 로고",
+//                    modifier = Modifier
+//                        .height(30.dp)
+//                        .width(70.dp)
+//                        .padding(end = 4.dp),
+//                    contentScale = ContentScale.Fit
+//                )
+//                if (imageRes.isNotBlank()) {
+//                    AsyncImage(
+//                        model = imageRes,
+//                        contentDescription = "$name 로고",
+//                        modifier = Modifier
+//                            .height(30.dp)
+//                            .width(70.dp)
+//                            .padding(end = 4.dp),
+//                        contentScale = ContentScale.Fit
+//                    )
+//                } else {
+//                    Image(
+//                        painter = painterResource(id = R.drawable.brand_hyundai),
+//                        contentDescription = "기본 로고",
+//                        modifier = Modifier
+//                            .height(30.dp)
+//                            .width(70.dp)
+//                            .padding(end = 4.dp),
+//                        contentScale = ContentScale.Fit
+//                    )
+//                }
                 Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = "$name 로고",
+                    painter = painterResource(id = R.drawable.brand_hyundai),
+                    contentDescription = "기본 로고",
                     modifier = Modifier
                         .height(30.dp)
                         .width(70.dp)
-                        .padding(end = 4.dp)
+                        .padding(end = 4.dp),
+                    contentScale = ContentScale.Fit
                 )
                 Text(
                     text = name,

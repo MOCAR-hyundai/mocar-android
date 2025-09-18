@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 data class SelectableItem(
     val name: String,
@@ -124,27 +126,17 @@ fun SelectableItemRow(
 }
 
 @Composable
-fun CarType(viewModel: SearchFilterViewModel = viewModel()) {
+fun CarType(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
 
-    val allTypes = listOf(
-        SelectableItem("경차", 14235),
-        SelectableItem("소형", 5424),
-        SelectableItem("준중형", 0),
-        SelectableItem("중형", 33211),
-        SelectableItem("대형", 26573),
-        SelectableItem("스포츠카", 2634),
-        SelectableItem("SUV", 73424),
-        SelectableItem("RV", 5623),
-        SelectableItem("승합", 5234),
-        SelectableItem("트럭", 17423),
-        SelectableItem("버스", 253),
-        SelectableItem("중기", 0)
-    )
+    val carTypes = listings
+        .groupBy { it.carType }
+        .map { (type, items) -> SelectableItem(type, items.size) }
+        .sortedByDescending { it.count }
 
     CheckList(
         title = "차종",
-        items = allTypes,
+        items = carTypes,
         selectedItems = state.selectedTypes,
         onToggle = { viewModel.toggleType(it) }
     )
@@ -152,59 +144,52 @@ fun CarType(viewModel: SearchFilterViewModel = viewModel()) {
 
 
 @Composable
-fun Fuel(viewModel: SearchFilterViewModel = viewModel()) {
-
+fun Fuel(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
 
-    val allFuels = listOf(
-        SelectableItem("가솔린(휘발유)", 92754),
-        SelectableItem("디젤(경유)", 11180),
-        SelectableItem("전기", 5524),
-        SelectableItem("LPI/LPG(가스)", 14249),
-        SelectableItem("하이브리드(가솔린)", 0),
-        SelectableItem("하이브리드(디젤)", 2152),
-        SelectableItem("하이브리드(LPG)", 31),
-        SelectableItem("가솔린+LPG(바이퓨얼)", 74),
-        SelectableItem("CNG(압축천연가스)", 5),
-        SelectableItem("기타", 275)
-    )
+    val fuels = listings
+        .groupBy { it.fuel }
+        .map { (type, items) -> SelectableItem(type, items.size) }
+        .sortedByDescending { it.count }
 
     CheckList(
         title = "연료",
-        items = allFuels,
+        items = fuels,
         selectedItems = state.selectedFuels,
         onToggle = { viewModel.toggleFuel(it) }
     )
 }
 
 @Composable
-fun Region(viewModel: SearchFilterViewModel = viewModel()) {
+fun Region(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
 
-    val allRegions = listOf(
-        SelectableItem("서울", 9275),
-        SelectableItem("인천", 11180),
-        SelectableItem("대전", 5524),
-        SelectableItem("대구", 5449),
-        SelectableItem("광주", 10334),
-        SelectableItem("부산", 12152),
-        SelectableItem("울산", 2831),
-        SelectableItem("세종", 1),
-        SelectableItem("경기", 71406),
-        SelectableItem("강원", 9275),
-        SelectableItem("경남", 11180),
-        SelectableItem("경북", 123),
-        SelectableItem("전남", 0),
-        SelectableItem("전북", 346),
-        SelectableItem("충남", 0),
-        SelectableItem("충북", 567),
-        SelectableItem("제주", 43),
-        )
+    val regions = listings
+        .groupBy { it.region }
+        .map { (type, items) -> SelectableItem(type, items.size) }
+        .sortedByDescending { it.count }
+
 
     CheckList(
         title = "지역",
-        items = allRegions,
+        items = regions,
         selectedItems = state.selectedRegions,
         onToggle = { viewModel.toggleRegion(it) }
     )
+}
+
+fun List<ListingData>.toSelectableMap(keySelector: (ListingData) -> String): List<SelectableItem> {
+    return this.groupBy(keySelector).map { (key, items) ->
+        SelectableItem(name = key, count = items.size)
+    }
+}
+
+fun List<ListingData>.toModelMapPerBrand(): Map<String, List<SelectableItem>> {
+    return this.groupBy { it.brand }
+        .mapValues { (_, brandItems) ->
+            brandItems.groupBy { it.model }
+                .map { (model, items) ->
+                    SelectableItem(model, items.size)
+                }
+        }
 }
