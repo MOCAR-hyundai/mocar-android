@@ -45,23 +45,26 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.autoever.mocar.R
-import com.autoever.mocar.model.Car
+import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.ui.home.formatKrwPretty
 
 @Composable
 fun CarDetailScreen(
-    car: Car?,
+    car: Car,
     onBack: () -> Unit,
-    onToggleFavorite: (Car) -> Unit
+    onToggleFavorite: () -> Unit
 ) {
     // car가 null이면 간단히 종료
-    if (car == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("차량 정보를 찾을 수 없습니다.")
-        }
-        return
-    }
+//    if (car == null) {
+//        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+//            Text("차량 정보를 찾을 수 없습니다.")
+//        }
+//        return
+//    }
+
+    var isFav by remember(car.id) { mutableStateOf(car.isFavorite) }
 
     Scaffold(
         topBar = {
@@ -95,21 +98,24 @@ fun CarDetailScreen(
                         .background(Color.White)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Image(
-                            painter = painterResource(id = car.imageRes),
-                            contentDescription = car.title,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
+                        if (car.imageUrl != null) {
+                            AsyncImage(
+                                model = car.imageUrl,
+                                contentDescription = car.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(Modifier.fillMaxSize().background(Color(0xFFF3F4F6)))
+                        }
                         Spacer(Modifier.height(8.dp))
                         DotsIndicator(total = 4, selected = 1)
                     }
-                    var isFav by remember { mutableStateOf(car.isFavorite) }
                     HeartButton(
                         isFavorite = isFav,
                         onClick = {
                             isFav = !isFav
-                            onToggleFavorite(car.copy(isFavorite = isFav))
+                            onToggleFavorite()
                         },
                         modifier = Modifier
                             .align(Alignment.TopEnd)

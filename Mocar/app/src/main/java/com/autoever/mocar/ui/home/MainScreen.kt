@@ -30,17 +30,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.autoever.mocar.model.Car
+import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.ui.chat.ChatScreen
+//import com.autoever.mocar.ui.home.HomeSampleData.cars
 import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
 import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.sell.SellCarScreen
 
 @Composable
-fun MainScreen(rootNavController: NavHostController,
-               cars: List<Car>,
-               onToggleFavorite: (String) -> Unit) {
+fun MainScreen(rootNavController: NavHostController) {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavItem.BuyCar,
@@ -75,11 +74,7 @@ fun MainScreen(rootNavController: NavHostController,
             modifier = Modifier.padding(inner)
         ) {
             composable(BottomNavItem.BuyCar.route)  {
-                HomeScreen(
-                    navController = rootNavController,
-                    cars = cars,
-                    onToggleFavorite = onToggleFavorite
-                )
+                HomeRoute(navController = rootNavController)
             }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
             composable(BottomNavItem.Search.route)  {
@@ -141,7 +136,7 @@ private fun MocarBottomBarPill(
                         Icon(
                             painter = painterResource(id = item.iconRes),
                             contentDescription = item.label,
-                            modifier = Modifier.size(25.dp),
+                            modifier = Modifier.size(20.dp),
                             tint = if (selected) Color.White else iconGray
                         )
                         Spacer(Modifier.height(4.dp))

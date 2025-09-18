@@ -12,8 +12,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +66,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
@@ -226,7 +229,9 @@ private fun SellBottomBar(
     onPrev: () -> Unit,
     onNext: () -> Unit
 ) {
-    Surface(shadowElevation = 10.dp, color = Color.White) {
+    Surface(shadowElevation = 0.dp,
+        tonalElevation  = 0.dp,
+        color = Color.White) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -310,7 +315,10 @@ private fun CarInfoStep(form: SellForm) {
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("차량 정보", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+        Text("차량 정보",
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start,
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
         Spacer(Modifier.height(16.dp))
 
         Image(
@@ -630,18 +638,32 @@ private fun LabeledField(
     onValueChange: (String) -> Unit,
     keyboardOptions: KeyboardOptions
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    var isFocused by remember { mutableStateOf(false) }
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp),
+            .heightIn(min = 56.dp)
+            .onFocusChanged { isFocused = it.isFocused }
+            .border(
+                BorderStroke(
+                    2.dp,
+                    if (isFocused) Color(0xFF2A5BFF) else Color(0xFF111827)
+                ),
+                RoundedCornerShape(14.dp)
+            ),
         placeholder = { Text(placeholder) },
         shape = RoundedCornerShape(14.dp),
         keyboardOptions = keyboardOptions,
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color(0xFF111827),
-            focusedBorderColor = Color(0xFF2A5BFF)
+            focusedBorderColor   = Color.Transparent,
+            unfocusedBorderColor = Color.Transparent,
+            disabledBorderColor  = Color.Transparent,
+            errorBorderColor     = Color.Transparent,
+            cursorColor          = Color(0xFF111827)
         )
     )
 }
@@ -662,12 +684,18 @@ private fun InfoCard(rows: List<Pair<String, String>>) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(label, color = Color(0xFF6B7280))
-                    Text(value, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        value,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2
+                    )
                 }
-                if (idx != rows.lastIndex) Divider(color = Color(0xFFF0F0F0))
             }
         }
     }
