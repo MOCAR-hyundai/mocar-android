@@ -90,15 +90,12 @@ fun MainScreen(rootNavController: NavHostController,
             }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
-                userName = "홍길동",
-                userEmail = "hong@domain.com",
-                profileImageUrl = null,
+                navController = rootNavController,
                 onEditProfileClick = {},
                 onWishListClick = {},
                 onPurchaseListClick = {},
                 onRegisterListClick = {},
                 onSettingsClick = {},
-                onLogoutClick = {}
             ) }
         }
     }

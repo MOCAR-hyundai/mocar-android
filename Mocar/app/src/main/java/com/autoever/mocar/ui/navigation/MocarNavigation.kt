@@ -81,6 +81,10 @@ fun MocarNavigation() {
         composable("signup") {
             SignUpPage(navController)
         }
+
+        composable("login") {
+            LoginPage(navController)
+        }
 //        composable("modelSelect") {
 //            ModelSelect(
 //
