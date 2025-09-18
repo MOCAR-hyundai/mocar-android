@@ -315,7 +315,10 @@ private fun CarInfoStep(form: SellForm) {
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("차량 정보", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+        Text("차량 정보",
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start,
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
         Spacer(Modifier.height(16.dp))
 
         Image(
@@ -681,12 +684,18 @@ private fun InfoCard(rows: List<Pair<String, String>>) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(label, color = Color(0xFF6B7280))
-                    Text(value, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        value,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2
+                    )
                 }
-                if (idx != rows.lastIndex) Divider(color = Color(0xFFF0F0F0))
             }
         }
     }
