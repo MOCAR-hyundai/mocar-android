@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -93,14 +94,13 @@ fun MyPageScreen(
                 Icon(
                     imageVector = Icons.Default.Edit, // androidx.compose.material.icons.Icons.Default.Edit 사용
                     contentDescription = "프로필 수정",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier
+                        .size(24.dp)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "프로필 수정",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -111,135 +111,118 @@ fun MyPageScreen(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(vertical = 8.dp)
         )
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background
-            ),
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp)
         ) {
-            Column {
-                // 나의 찜 매물
-                Row(
+            // 나의 찜 매물
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onWishListClick() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 아이콘(하트) 원 안에
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onWishListClick() }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(48.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.LightGray.copy(alpha = 0.8f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // 아이콘(하트) 원 안에
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .border(
-                                width = 1.dp,
-                                color = Color.LightGray.copy(alpha = 0.8f),
-                                shape = CircleShape
-                            )
-                            .background(
-                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.1f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.FavoriteBorder,
-                            contentDescription = "찜 매물",
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "나의 찜 매물",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
-                    )
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "이동",
+                        imageVector = Icons.Outlined.FavoriteBorder,
+                        contentDescription = "찜 매물",
                     )
                 }
-                // 나의 구입 매물
-                Row(
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "나의 찜 매물",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "이동",
+                )
+            }
+            // 나의 구입 매물
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onPurchaseListClick() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 아이콘(쇼핑카트) 원 안에
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onPurchaseListClick() }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(48.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.LightGray.copy(alpha = 0.8f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // 아이콘(쇼핑카트) 원 안에
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .border(
-                                width = 1.dp,
-                                color = Color.LightGray.copy(alpha = 0.8f),
-                                shape = CircleShape
-                            )
-                            .background(
-                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.1f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.DirectionsCar,
-                            contentDescription = "구입 매물",
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "나의 구입 매물",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
-                    )
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "이동",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Outlined.DirectionsCar,
+                        contentDescription = "구입 매물",
                     )
                 }
-                // 나의 등록 매물
-                Row(
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "나의 구입 매물",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "이동",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // 나의 등록 매물
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onRegisterListClick() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 아이콘(업로드) 원 안에
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onRegisterListClick() }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(48.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.LightGray.copy(alpha = 0.8f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // 아이콘(업로드) 원 안에
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .border(
-                                width = 1.dp,
-                                color = Color.LightGray.copy(alpha = 0.8f),
-                                shape = CircleShape
-                            )
-                            .background(
-                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.1f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "$",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "나의 등록 매물",
+                        text = "$",
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "이동",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Bold
+
                     )
                 }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "나의 등록 매물",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "이동",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -249,91 +232,74 @@ fun MyPageScreen(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(vertical = 8.dp)
         )
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp)
-        ) {
-            Column {
-                Row(
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSettingsClick() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSettingsClick() }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(48.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.LightGray.copy(alpha = 0.8f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .border(
-                                width = 1.dp,
-                                color = Color.LightGray.copy(alpha = 0.8f),
-                                shape = CircleShape
-                            )
-                            .background(
-                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.1f),
-                                shape = CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "설정",
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "설정",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
-                    )
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "이동",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "설정",
                     )
                 }
-                Row(
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "설정",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "이동",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onLogoutClick() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onLogoutClick() }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(48.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.LightGray.copy(alpha = 0.8f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .border(
-                                width = 1.dp,
-                                color = Color.LightGray.copy(alpha = 0.8f),
-                                shape = CircleShape
-                            )
-                            .background(
-                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.1f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ExitToApp,
-                            contentDescription = "로그아웃",
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "로그아웃",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
-                    )
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "이동",
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = "로그아웃",
                     )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "로그아웃",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "이동",
+                )
 
-                }
             }
         }
     }
