@@ -139,7 +139,7 @@ private fun MocarBottomBarPill(
                         Icon(
                             painter = painterResource(id = item.iconRes),
                             contentDescription = item.label,
-                            modifier = Modifier.size(25.dp),
+                            modifier = Modifier.size(20.dp),
                             tint = if (selected) Color.White else iconGray
                         )
                         Spacer(Modifier.height(4.dp))

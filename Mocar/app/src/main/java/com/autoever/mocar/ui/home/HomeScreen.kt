@@ -87,6 +87,7 @@ import com.autoever.mocar.ui.home.HomeSampleData.cars
 fun HomeScreen(navController: NavController,
                cars: List<Car>,
                onToggleFavorite: (String) -> Unit) {
+    val gutter = 22.dp
     var favorites by remember { mutableStateOf(HomeSampleData.cars) }
     var selectedBrandId by remember { mutableStateOf<String?>(null) }
 
@@ -101,7 +102,10 @@ fun HomeScreen(navController: NavController,
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8F8F8)),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(
+            start = gutter, end = gutter,
+            top = 16.dp, bottom = 20.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // 상단바 / 검색
@@ -138,7 +142,6 @@ fun HomeScreen(navController: NavController,
                 }
             }
         }
-
         // 필터 결과 헤더
         item {
             val title = if (selectedBrandId == null) {
@@ -342,23 +345,16 @@ fun CarCard(
                 )
 
                 // 카드 안쪽 오른쪽 상단 하트 버튼
-                Box(
+                Icon(
+                    imageVector = if (car.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = "찜",
+                    tint = if (car.isFavorite) Color.Red else Color(0xFF111827),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(top = 12.dp, end = 12.dp)
-                        .size(32.dp) // 동그라미 크기
-                        .border(1.dp, Color(0xFFE5E7EB), CircleShape) // 회색 테두리
-                        .background(Color.White, CircleShape) // 흰색 배경
-                        .clickable { onFavoriteToggle() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (car.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = "찜",
-                        tint = Color(0xFF111827), // 아이콘 색
-                        modifier = Modifier.size(20.dp) // 하트 아이콘 크기
-                    )
-                }
+                        .size(24.dp)
+                        .clickable { onFavoriteToggle() }
+                )
             }
 
             Divider(color = Color(0xFFEDEDED), thickness = 1.dp)
