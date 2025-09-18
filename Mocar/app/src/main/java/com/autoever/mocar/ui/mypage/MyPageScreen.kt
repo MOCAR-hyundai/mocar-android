@@ -28,23 +28,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun MyPageScreen(
-    userName: String,
-    userEmail: String,
-    profileImageUrl: String? = null,
+    navController: NavHostController,
     onEditProfileClick: () -> Unit,
     onWishListClick: () -> Unit,
     onPurchaseListClick: () -> Unit,
     onRegisterListClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onLogoutClick: () -> Unit,
 ) {
-    val user = FirebaseAuth.getInstance().currentUser
-    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+    val user = auth.currentUser
 
     Column(
         modifier = Modifier
@@ -333,7 +332,10 @@ fun MyPageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onLogoutClick() }
+                    .clickable {
+                        auth.signOut()
+                        navController.navigate("login")
+                    }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -372,14 +374,11 @@ fun MyPageScreen(
 @Composable
 fun MyPageScreenPreview() {
     MyPageScreen(
-        userName = "홍길동",
-        userEmail = "hong@domain.com",
-        profileImageUrl = null,
+        navController = rememberNavController(),
         onEditProfileClick = {},
         onWishListClick = {},
         onPurchaseListClick = {},
         onRegisterListClick = {},
         onSettingsClick = {},
-        onLogoutClick = {}
     )
 }
