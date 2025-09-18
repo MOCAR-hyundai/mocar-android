@@ -12,37 +12,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun RangeInputSlider(
     title: String,
     unit: String,
-    valueRange: ClosedFloatingPointRange<Float> = 0f..100f
+    valueRange: ClosedFloatingPointRange<Float>,
+    currentRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (ClosedFloatingPointRange<Float>) -> Unit
 ) {
-    var sliderRange by remember { mutableStateOf(valueRange) }
-    var minInput by remember { mutableStateOf(sliderRange.start.toInt().toString()) }
-    var maxInput by remember { mutableStateOf(sliderRange.endInclusive.toInt().toString()) }
-
+    var minInput by remember(currentRange) { mutableStateOf(currentRange.start.toInt().toString()) }
+    var maxInput by remember(currentRange) { mutableStateOf(currentRange.endInclusive.toInt().toString()) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Text(
-            text = title,
-            modifier = Modifier.padding(vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
-            fontSize = 16.sp
-        )
+        Text(title, fontSize = 16.sp, modifier = Modifier.padding(vertical = 8.dp))
 
         RangeSlider(
-            value = sliderRange,
+            value = currentRange,
             onValueChange = {
-                sliderRange = it
+                onValueChange(it)
                 minInput = it.start.toInt().toString()
-                maxInput = it.endInclusive.toInt().toString()},
+                maxInput = it.endInclusive.toInt().toString()
+            },
             valueRange = valueRange,
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
@@ -65,23 +62,18 @@ fun RangeInputSlider(
                 onValueChange = {
                     minInput = it
                     val num = it.toFloatOrNull()
-                    if (num != null && num in valueRange && num <= sliderRange.endInclusive) {
-                        sliderRange = num..sliderRange.endInclusive
+                    if (num != null && num in valueRange && num <= currentRange.endInclusive) {
+                        onValueChange(num..currentRange.endInclusive)
                     }
                 },
-                readOnly = false,
-                placeholder = { Text("최소 $title") },
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.weight(1f).height(56.dp),
+                placeholder = { Text("최소") },
                 singleLine = true,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
                 suffix = { Text(unit, fontSize = 14.sp) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF3058EF),
-                    unfocusedBorderColor = Color.Gray,
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White
+                    unfocusedBorderColor = Color.Gray
                 )
             )
 
@@ -94,40 +86,59 @@ fun RangeInputSlider(
                 onValueChange = {
                     maxInput = it
                     val num = it.toFloatOrNull()
-                    if (num != null && num in valueRange && num >= sliderRange.start) {
-                        sliderRange = sliderRange.start..num
+                    if (num != null && num in valueRange && num >= currentRange.start) {
+                        onValueChange(currentRange.start..num)
                     }
                 },
-                readOnly = false,
-                placeholder = { Text("최대 $title") },
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.weight(1f).height(56.dp),
+                placeholder = { Text("최대") },
                 singleLine = true,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
                 suffix = { Text(unit, fontSize = 14.sp) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF3058EF),
-                    unfocusedBorderColor = Color.Gray,
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White
+                    unfocusedBorderColor = Color.Gray
                 )
             )
         }
     }
 }
 
+
 @Composable
-fun Price() {
-    RangeInputSlider(title = "가격", unit = "만원", valueRange = 0f..10000f)
+fun Price(viewModel: SearchFilterViewModel = viewModel()) {
+    val state by viewModel.filterState.collectAsState()
+    RangeInputSlider(
+        title = "가격",
+        unit = "만원",
+        valueRange = 0f..10000f,
+        currentRange = state.priceRange,
+        onValueChange = { viewModel.updatePrice(it) }
+    )
+}
+
+
+@Composable
+fun Year(viewModel: SearchFilterViewModel = viewModel()) {
+    val state by viewModel.filterState.collectAsState()
+    RangeInputSlider(
+        title = "연식",
+        unit = "년",
+        valueRange = 2006f..2025f,
+        currentRange = state.yearRange,
+        onValueChange = { viewModel.updateYear(it) }
+    )
 }
 
 @Composable
-fun Year() {
-    RangeInputSlider(title = "연식", unit = "년", valueRange = 2000f..2025f)
-}
+fun Mileage(viewModel: SearchFilterViewModel = viewModel()) {
+    val state by viewModel.filterState.collectAsState()
 
-@Composable
-fun Mileage() {
-    RangeInputSlider(title = "주행거리", unit = "km", valueRange = 0f..200000f)
+    RangeInputSlider(
+        title = "주행거리",
+        unit = "km",
+        valueRange = 0f..200000f,
+        currentRange = state.mileageRange,
+        onValueChange = { viewModel.updateMileage(it) }
+    )
 }

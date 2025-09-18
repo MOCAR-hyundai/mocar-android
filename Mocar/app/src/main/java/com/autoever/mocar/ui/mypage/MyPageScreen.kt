@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -22,88 +23,149 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun MyPageScreen(
-    userName: String,
-    userEmail: String,
-    profileImageUrl: String? = null,
+    navController: NavHostController,
     onEditProfileClick: () -> Unit,
     onWishListClick: () -> Unit,
     onPurchaseListClick: () -> Unit,
     onRegisterListClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onLogoutClick: () -> Unit,
 ) {
+    val auth = FirebaseAuth.getInstance()
+    val user = auth.currentUser
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.Top
     ) {
-        // 1. 프로필 정보 영역
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (profileImageUrl != null) {
-                // Coil 등 이미지 라이브러리 사용 필요
-                // 예시: AsyncImage(model = profileImageUrl, contentDescription = "프로필 사진", ...)
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
-                    contentAlignment = Alignment.Center
+        if (user != null) {
+            // 1. 프로필 정보 영역
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Firestore에서 유저 정보 가져오기 위한 상태
+                var userNameState by remember { mutableStateOf<String?>(null) }
+                var userEmailState by remember { mutableStateOf<String?>(null) }
+                var userPhotoUrlState by remember { mutableStateOf<String?>(null) }
+                var isUserLoaded by remember { mutableStateOf(false) }
+
+                // Firestore에서 유저 정보 fetch
+                LaunchedEffect(user?.uid) {
+                    if (user != null && !isUserLoaded) {
+                        val db = FirebaseFirestore.getInstance()
+                        db.collection("users").document(user.uid)
+                            .get()
+                            .addOnSuccessListener { document ->
+                                if (document != null && document.exists()) {
+                                    userNameState = document.getString("name")
+                                    userEmailState = document.getString("email")
+                                    userPhotoUrlState = document.getString("photoUrl")
+                                } else {
+                                    userNameState = null
+                                    userEmailState = null
+                                    userPhotoUrlState = null
+                                }
+                                isUserLoaded = true
+                            }
+                            .addOnFailureListener {
+                                userNameState = null
+                                userEmailState = null
+                                userPhotoUrlState = null
+                                isUserLoaded = true
+                            }
+                    }
+                }
+
+                // 프로필 이미지
+                if (!userPhotoUrlState.isNullOrBlank()) {
+                    // Coil 등 이미지 라이브러리 사용 필요
+                    // 예시: AsyncImage(model = userPhotoUrlState, contentDescription = "프로필 사진", ...)
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = userNameState?.firstOrNull()?.toString() ?: "",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(20.dp))
+                Column(
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = userName.firstOrNull()?.toString() ?: "",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        text = userNameState ?: "이름이 존재하지 않습니다.",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = userEmailState ?: "이메일이 존재하지 않습니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onEditProfileClick() }
+                        .padding(8.dp)
+                        .background(Color.White),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "프로필 수정",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(Color.White)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "프로필 수정",
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(20.dp))
-            Column(
-                modifier = Modifier.weight(1f)
+        } else {
+            // 로그인 안 됨: 전체 영역 "로그인해주세요"로 대체
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = userName,
+                    text = "로그인해주세요",
                     style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = userEmail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit, // androidx.compose.material.icons.Icons.Default.Edit 사용
-                    contentDescription = "프로필 수정",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "프로필 수정",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
+
 
         // 2. My 영역
         Text(
@@ -119,7 +181,11 @@ fun MyPageScreen(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            Column {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+            ) {
                 // 나의 찜 매물
                 Row(
                     modifier = Modifier
@@ -225,7 +291,8 @@ fun MyPageScreen(
                         Text(
                             text = "$",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.Bold
+
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -257,7 +324,10 @@ fun MyPageScreen(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            Column {
+            Column(
+                modifier = Modifier
+                    .background(Color.White)
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -299,7 +369,10 @@ fun MyPageScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onLogoutClick() }
+                        .clickable {
+                            auth.signOut()
+                            navController.navigate("login")
+                        }
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -332,7 +405,6 @@ fun MyPageScreen(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "이동",
                     )
-
                 }
             }
         }
@@ -343,14 +415,11 @@ fun MyPageScreen(
 @Composable
 fun MyPageScreenPreview() {
     MyPageScreen(
-        userName = "홍길동",
-        userEmail = "hong@domain.com",
-        profileImageUrl = null,
+        navController = rememberNavController(),
         onEditProfileClick = {},
         onWishListClick = {},
         onPurchaseListClick = {},
         onRegisterListClick = {},
         onSettingsClick = {},
-        onLogoutClick = {}
     )
 }

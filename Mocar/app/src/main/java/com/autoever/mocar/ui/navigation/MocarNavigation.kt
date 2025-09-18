@@ -43,7 +43,9 @@ fun MocarNavigation() {
             MainScreen(rootNavController = navController)
         }
         composable(ROUTE_SEARCH) {
-            SearchPage(navController)
+            SearchPage(navController,
+                onBack = { navController.popBackStack() }
+            )
         }
         // 차량 상세
         composable(
@@ -59,17 +61,19 @@ fun MocarNavigation() {
         composable("signup") {
             SignUpPage(navController)
         }
-        composable("modelSelect") {
-            ModelSelect(
-                onBack = { navController.popBackStack() },
-                onConfirm = { selectedModels ->
-                    println("선택된 모델: $selectedModels")
-                    navController.popBackStack()
-                }
-            )
+
+        composable("login") {
+            LoginPage(navController)
         }
-
-
-
+//        composable("modelSelect") {
+//            ModelSelect(
+//
+//                onBack = { navController.popBackStack() },
+//                onConfirm = { selectedModels ->
+//                    println("선택된 모델: $selectedModels")
+//                    navController.popBackStack()
+//                }
+//            )
+//        }
     }
 }

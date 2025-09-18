@@ -77,18 +77,20 @@ fun MainScreen(rootNavController: NavHostController) {
                 HomeRoute(navController = rootNavController)
             }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
-            composable(BottomNavItem.Search.route)  { SearchPage(navController=rootNavController) }
+            composable(BottomNavItem.Search.route)  {
+                SearchPage(
+                    navController=rootNavController,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
-                userName = "홍길동",
-                userEmail = "hong@domain.com",
-                profileImageUrl = null,
+                navController = rootNavController,
                 onEditProfileClick = {},
                 onWishListClick = {},
                 onPurchaseListClick = {},
                 onRegisterListClick = {},
                 onSettingsClick = {},
-                onLogoutClick = {}
             ) }
         }
     }
