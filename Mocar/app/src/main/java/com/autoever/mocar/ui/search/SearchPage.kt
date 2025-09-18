@@ -5,17 +5,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -26,14 +21,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+import com.autoever.mocar.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchPage(navController : NavController) {
+fun SearchPage(
+    navController : NavController,
+    onBack: () -> Unit,
+    viewModel: SearchFilterViewModel = viewModel()
+) {
     var searchText by remember { mutableStateOf("") }
     var selectedMenu by remember { mutableStateOf("제조사") }
 
@@ -57,8 +74,12 @@ fun SearchPage(navController : NavController) {
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
+                IconButton(onClick = onBack,
+                    modifier = Modifier.size(38.dp)) {
+                    Icon(painterResource(id = R.drawable.ic_back), contentDescription = "뒤로",
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.Black
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -70,11 +91,17 @@ fun SearchPage(navController : NavController) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(40.dp)
                     .padding(horizontal = 12.dp)
                     .padding(bottom = 15.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                Text("최근검색기록")
+                Text("최근검색기록 ")
+                Icon(
+                    imageVector = Icons.Default.ArrowForwardIos,
+                    contentDescription = "제조사 다시 선택",
+                    tint = Color.Gray
+                )
             }
 
             // 본문 영역 (좌측 메뉴 + 우측 내용)
@@ -87,9 +114,13 @@ fun SearchPage(navController : NavController) {
                         shape = RectangleShape
                     )
             ) {
-                LeftMenu(selected = selectedMenu) { clicked ->
-                    selectedMenu = clicked
-                }
+                val viewModel: SearchFilterViewModel = viewModel()
+
+                LeftMenu(
+                    selected = selectedMenu,
+                    onSelect = { selectedMenu = it },
+                    viewModel = viewModel
+                )
 
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedMenu) {
@@ -121,7 +152,7 @@ fun SearchBar(
                 .weight(1f)
                 .height(56.dp),
             singleLine = true,
-            placeholder = { Text("차량번호를 검색해보세요") },
+            placeholder = { Text("제조사, 모델을 검색해보세요") },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -150,7 +181,78 @@ fun SearchBar(
 }
 
 @Composable
+fun LeftMenu(selected: String,
+             onSelect: (String) -> Unit,
+             viewModel: SearchFilterViewModel = viewModel()
+) {
+
+    val state by viewModel.filterState.collectAsState()
+    val default = SearchFilterState() // 기본값
+
+    val menuItems = listOf("제조사", "가격", "연식", "주행거리", "차종", "연료", "지역")
+
+    Column(
+        modifier = Modifier
+            .width(100.dp)
+            .fillMaxSize()
+            .padding(start = 0.dp)
+            .border(
+                width = 0.5.dp,
+                color = Color(0xFFD7D7D7),
+                shape = RectangleShape
+            ),
+        verticalArrangement = Arrangement.Top,
+    ) {
+        menuItems.forEach { item ->
+            val isChanged = when (item) {
+                "가격"     -> state.priceRange != default.priceRange
+                "연식"     -> state.yearRange != default.yearRange
+                "주행거리" -> state.mileageRange != default.mileageRange
+                "차종"     -> state.selectedTypes.isNotEmpty()
+                "연료"     -> state.selectedFuels.isNotEmpty()
+                "지역"     -> state.selectedRegions.isNotEmpty()
+                else       -> false
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .background(if (selected == item) Color.White else Color(0xFFEDEDED))
+                    .clickable { onSelect(item) },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = item,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(vertical = 12.dp),
+                        color = if (selected == item) Color(0xFF3058EF) else Color.Black,
+                        fontWeight = if (selected == item) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    if (isChanged) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .align(Alignment.TopEnd)
+                                .offset(x = (-10).dp, y = 10.dp)
+                                .background(Color.Red, shape = RoundedCornerShape(50))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 버튼
+@Composable
 fun BottomButtons() {
+    val viewModel: SearchFilterViewModel = viewModel()
+
     Row(
         Modifier
             .fillMaxWidth()
@@ -158,13 +260,14 @@ fun BottomButtons() {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         OutlinedButton(
-            onClick = { /* 초기화 */ },
+            onClick = { viewModel.resetAllFilters() },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = Color.Black
             ),
             shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
                 .height(60.dp)
         ) {
             Text(text = "초기화",
@@ -181,13 +284,15 @@ fun BottomButtons() {
                 contentColor = Color.White
             ),
             shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.weight(2f)
+            modifier = Modifier
+                .weight(2f)
                 .height(60.dp)
         ) {
             Text(
-                text = "2,536대 보기",
+                text = "선택",
                 fontSize = 16.sp,
             )
         }
     }
 }
+
