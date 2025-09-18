@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -93,14 +94,14 @@ fun MyPageScreen(
                 Icon(
                     imageVector = Icons.Default.Edit, // androidx.compose.material.icons.Icons.Default.Edit 사용
                     contentDescription = "프로필 수정",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier
+                        .size(24.dp)
+                        .background(Color.White)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "프로필 수정",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -119,7 +120,11 @@ fun MyPageScreen(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            Column {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+            ) {
                 // 나의 찜 매물
                 Row(
                     modifier = Modifier
@@ -225,7 +230,8 @@ fun MyPageScreen(
                         Text(
                             text = "$",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.Bold
+
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -257,7 +263,10 @@ fun MyPageScreen(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            Column {
+            Column(
+                modifier = Modifier
+                    .background(Color.White)
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
