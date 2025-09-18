@@ -237,12 +237,11 @@ fun SelectedFilterSummary(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 30.dp)
+            .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Color.Black, RoundedCornerShape(12.dp)),
+                .fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color.Transparent
