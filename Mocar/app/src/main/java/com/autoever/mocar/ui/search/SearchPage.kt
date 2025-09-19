@@ -1,5 +1,6 @@
 package com.autoever.mocar.ui.search
 
+import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -38,18 +39,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-
 import com.autoever.mocar.R
+import com.autoever.mocar.viewmodel.ListingData
+import com.autoever.mocar.viewmodel.ListingViewModel
+import com.autoever.mocar.viewmodel.SearchBarViewModel
+import com.autoever.mocar.viewmodel.SearchFilterState
+import com.autoever.mocar.viewmodel.SearchFilterViewModel
+import com.autoever.mocar.viewmodel.SearchUiState
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,14 +63,24 @@ import com.autoever.mocar.R
 fun SearchPage(
     navController: NavController,
     onBack: () -> Unit,
-    filterViewModel: SearchFilterViewModel = viewModel(),
-    searchBarViewModel: SearchBarViewModel = viewModel()
+    filterViewModel: SearchFilterViewModel = viewModel()
 ) {
-    val searchState by searchBarViewModel.uiState.collectAsState()
-    val isSearchActive by searchBarViewModel.isSearchActive.collectAsState()
     var selectedMenu by remember { mutableStateOf("제조사") }
     val listingViewModel: ListingViewModel = viewModel()
     val listings by listingViewModel.listings.collectAsState()
+    val context = LocalContext.current.applicationContext as Application
+
+    val searchBarViewModel: SearchBarViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return SearchBarViewModel(listingViewModel, context) as T
+            }
+        }
+    )
+
+    val searchState by searchBarViewModel.uiState.collectAsState()
+    val isSearchActive by searchBarViewModel.isSearchActive.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -74,14 +90,13 @@ fun SearchPage(
             }
         }
     ) { innerPadding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF8F8F8))
                 .padding(innerPadding)
         ) {
-            // 🔍 상단 검색창
+            // 상단 검색창
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -102,7 +117,7 @@ fun SearchPage(
                 )
             }
 
-            // ✅ 이 부분에 조건문 넣기!
+            // 이 부분에 조건문 넣기!
             if (isSearchActive) {
                 SearchFullScreen(
                     searchState = searchState,
@@ -115,11 +130,26 @@ fun SearchPage(
                     onCarClick = {
                         searchBarViewModel.selectCar(it)
                         searchBarViewModel.deactivateSearch()
-                        navController.navigate("search")
+                        navController.popBackStack()
                     }
                 )
             } else {
-                // 🧭 기존 화면: 메뉴 + 필터
+                // 최근 검색 기록
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 15.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text("최근 검색기록 ")
+                    Icon(
+                        imageVector = Icons.Default.ArrowForwardIos,
+                        contentDescription = "최근검색기록",
+                        tint = Color.Gray
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxHeight()
@@ -148,7 +178,6 @@ fun SearchPage(
     }
 }
 
-
 @Composable
 fun SearchBar(
     value: String,
@@ -170,7 +199,7 @@ fun SearchBar(
         OutlinedTextField(
             value = value,
             onValueChange = {
-                if (!hasClicked) onClick() // 첫 입력 시도 시에도 SearchFullScreen 진입 보장
+                if (!hasClicked) onClick() // 첫 입력 시도 시에도 SearchFullScreen
                 onValueChange(it)
             },
             modifier = Modifier
@@ -187,14 +216,12 @@ fun SearchBar(
             },
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White,
-                unfocusedBorderColor = Color(0xFFE5E7EB),
-                focusedBorderColor = Color(0xFFE5E7EB),
-                unfocusedTextColor = Color(0xFF111827),
+                focusedBorderColor = Color(0xFF3058EF),
+                unfocusedBorderColor = Color.Gray,
                 focusedTextColor = Color(0xFF111827),
-                unfocusedPlaceholderColor = Color(0xFF9CA3AF),
+                unfocusedTextColor = Color(0xFF111827),
                 focusedPlaceholderColor = Color(0xFF9CA3AF),
+                unfocusedPlaceholderColor = Color(0xFF9CA3AF),
                 cursorColor = Color(0xFF2A5BFF)
             )
         )
@@ -207,7 +234,6 @@ fun LeftMenu(selected: String,
              onSelect: (String) -> Unit,
              viewModel: SearchFilterViewModel = viewModel()
 ) {
-
     val state by viewModel.filterState.collectAsState()
     val default = SearchFilterState() // 기본값
 
@@ -327,80 +353,80 @@ fun SearchFullScreen(
     onRemoveKeyword: (String) -> Unit,
     onClearAll: () -> Unit,
     onSearchSubmit: () -> Unit,
-    onCarClick: (CarSeed) -> Unit
+    onCarClick: (ListingData) -> Unit
 ) {
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
-        Spacer(modifier = Modifier.height(20.dp))
 
-        if (searchState.query.isBlank()) {
-            // 입력 없음 → 안내 메시지 UI
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text("최근 검색 키워드", fontWeight = FontWeight.SemiBold)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (searchState.recentKeywords.isEmpty()) {
-                // 검색어가 없을 때 안내문구
-                Text(
-                    "키워드 검색하고, 원하는 차량을 찾아보세요",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
-            } else {
-                Column {
-                    Text("최근 검색어", fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    LazyRow {
-                        items(searchState.recentKeywords) { keyword ->
-                            Box(
-                                modifier = Modifier
-                                    .padding(end = 8.dp)
-                                    .background(Color(0xFFE0E0E0), RoundedCornerShape(20.dp))
-                                    .clickable {
-                                        val matchedCar = searchState.searchResults.find { car ->
-                                            "${car.maker} ${car.model}" == keyword
-                                        }
-                                        if (matchedCar != null) {
-                                            onCarClick(matchedCar)
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-
-                            ) {
-                                Text(text = keyword, fontSize = 14.sp)
-                            }
-                        }
-                    }
-
-                    }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("최근 검색기록", fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "제조사, 차종 검색을 통해 원하는 조건으로 찾아보세요",
+                text = "전체 삭제",
+                color = Color.Red,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .clickable { onClearAll() }
+                    .padding(end = 4.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        if (searchState.recentKeywords.isEmpty() && searchState.query.isBlank()) {
+                // 검색어가 없을 때 안내문구
+            Text(
+                "키워드 검색하고, 원하는 차량을 찾아보세요",
                 color = Color.Gray,
                 fontSize = 14.sp
             )
-        } else if (searchState.searchResults.isNotEmpty()) {
-            // ✅ 입력 결과 있음
+        }
+
+        LazyRow {
+            items(searchState.recentKeywords) { keyword ->
+                Row(
+                    modifier = Modifier
+                        .background(Color(0xFFE0E0E0), RoundedCornerShape(20.dp))
+                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = keyword,
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .clickable {
+                                onKeywordClick(keyword)
+                                onSearchSubmit()
+                            }
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "삭제",
+                        tint = Color.Gray,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable { onRemoveKeyword(keyword) }
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (searchState.searchResults.isNotEmpty()) {
             LazyColumn {
-                items(searchState.searchResults) { car ->
+                items(searchState.searchResults) { listing ->
                     Column(Modifier
-                        .padding(vertical = 12.dp)) {
-                        Text("${car.maker} ${car.model}", fontWeight = FontWeight.Bold)
-
-                        // 예시: 2024년식 기준
-                        val year = 2024
-                        val price = car.basePrice
-                        val mileage = car.baseMileage
-
-                        Text("연식 ${year}년   가격 ${price}만원   주행 ${"%,d".format(mileage)}km", color = Color.Gray)
+                        .padding(vertical = 12.dp)
+                        .clickable { onCarClick(listing) }) {
+                        Text("${listing.brand} ${listing.model}", fontWeight = FontWeight.Bold)
+                        Text("연료: ${listing.fuel}  |  차종: ${listing.carType}", color = Color.Gray)
                     }
                     HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 0.5.dp)
                 }

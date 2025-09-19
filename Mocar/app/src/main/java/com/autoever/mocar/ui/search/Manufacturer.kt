@@ -34,8 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.autoever.mocar.R
+import com.autoever.mocar.viewmodel.ListingData
+import com.autoever.mocar.viewmodel.ListingViewModel
 
 data class carDatas(
     val name: String,
@@ -117,13 +118,13 @@ fun Manufacturer(navController: NavController, searchQuery: String, viewModel: L
                 .padding(horizontal = 10.dp)
         ) {
             item { CategoryLabel("국산차") }
-            items(koreanBrands.size) { index ->
-                val (name, count, imageUrl) = koreanBrands[index]
+            items(allBrands.size) { index ->
+                val (name, count, imageUrl) = allBrands[index]
                 ManufacturerCard(name, count, imageUrl) {
                     selectedBrand = name
                     showModelSheet = true
                 }
-                if (index < koreanBrands.size - 1) {
+                if (index < allBrands.size - 1) {
                     HorizontalDivider(
                         color = Color(0xFFE0E0E0),
                         thickness = 0.7.dp,
@@ -133,20 +134,20 @@ fun Manufacturer(navController: NavController, searchQuery: String, viewModel: L
             }
 
             item { CategoryLabel("수입차") }
-            items(foreignBrands.size) { index ->
-                val (name, count, imageUrl) = foreignBrands[index]
-                ManufacturerCard(name, count, imageUrl) {
-                    selectedBrand = name
-                    showModelSheet = true
-                }
-                if (index < foreignBrands.size - 1) {
-                    HorizontalDivider(
-                        color = Color(0xFFE0E0E0),
-                        thickness = 0.7.dp,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                }
-            }
+//            items(foreignBrands.size) { index ->
+//                val (name, count, imageUrl) = foreignBrands[index]
+//                ManufacturerCard(name, count, imageUrl) {
+//                    selectedBrand = name
+//                    showModelSheet = true
+//                }
+//                if (index < foreignBrands.size - 1) {
+//                    HorizontalDivider(
+//                        color = Color(0xFFE0E0E0),
+//                        thickness = 0.7.dp,
+//                        modifier = Modifier.padding(horizontal = 8.dp)
+//                    )
+//                }
+//            }
         }
 
     }
@@ -409,7 +410,6 @@ fun SelectedFilterSummary(
                }
             }
         }
-
     }
 }
 

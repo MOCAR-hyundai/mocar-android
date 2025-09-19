@@ -1,5 +1,6 @@
-package com.autoever.mocar.ui.search
+package com.autoever.mocar.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
@@ -63,12 +64,11 @@ class SearchFilterViewModel : ViewModel() {
 
 data class ListingData(
     val brand: String = "",
-    val images: List<String> = emptyList(), // ✅ 반드시 이렇게 있어야 함
+    val images: List<String> = emptyList(),
     val model: String = "",
     val fuel: String = "",
-    val carType: String = "",
+    val carType: String? = null, // ← 여기를 nullable로
     val region: String = "",
-    // 기타 필드들...
 )
 
 
@@ -85,25 +85,41 @@ class ListingViewModel : ViewModel() {
     private fun fetchListings() {
         db.collection("listings").get()
             .addOnSuccessListener { result ->
+                Log.d("Firestore", "📦 Fetched documents: ${result.size()}")
+
                 val parsed = result.mapNotNull { doc ->
-                    val brand = doc.getString("brand") ?: return@mapNotNull null
-                    val model = doc.getString("model") ?: return@mapNotNull null
-                    val carType = doc.getString("carType") ?: return@mapNotNull null
-                    val fuel = doc.getString("fuel") ?: return@mapNotNull null
-                    val region = doc.getString("region") ?: return@mapNotNull null
+                    val brand = doc.getString("brand")
+                    val model = doc.getString("model")
+                    val fuel = doc.getString("fuel")
+                    val carType = doc.getString("carType")
+                    val region = doc.getString("region")
                     val imageList = doc.get("images") as? List<String> ?: emptyList()
+
+                    // 로그로 각 필드 출력
+                    Log.d("Firestore", "🧩 doc: brand=$brand, model=$model, fuel=$fuel, carType=$carType, region=$region")
+
+                    if (brand == null || model == null || fuel == null || region == null) {
+                        Log.w("Firestore", "⚠️ Skipped doc ${doc.id} due to null required fields")
+                        return@mapNotNull null
+                    }
 
                     ListingData(
                         brand = brand,
-                        images = imageList, // ✅ 여기
+                        images = imageList,
                         model = model,
                         fuel = fuel,
                         carType = carType,
                         region = region
                     )
                 }
+
+                Log.d("Firestore", "✅ Parsed listings: ${parsed.size}")
                 _listings.value = parsed
             }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "❌ Failed to fetch listings", e)
+            }
+
     }
 
 }

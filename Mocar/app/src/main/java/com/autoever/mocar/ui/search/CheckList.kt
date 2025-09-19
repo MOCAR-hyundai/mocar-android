@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.autoever.mocar.viewmodel.ListingData
+import com.autoever.mocar.viewmodel.SearchFilterViewModel
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -130,7 +132,7 @@ fun CarType(listings: List<ListingData>, viewModel: SearchFilterViewModel = view
     val state by viewModel.filterState.collectAsState()
 
     val carTypes = listings
-        .groupBy { it.carType }
+        .groupBy { it.carType ?: "--" }
         .map { (type, items) -> SelectableItem(type, items.size) }
         .sortedByDescending { it.count }
 
@@ -141,7 +143,6 @@ fun CarType(listings: List<ListingData>, viewModel: SearchFilterViewModel = view
         onToggle = { viewModel.toggleType(it) }
     )
 }
-
 
 @Composable
 fun Fuel(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewModel()) {
@@ -168,7 +169,6 @@ fun Region(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewM
         .groupBy { it.region }
         .map { (type, items) -> SelectableItem(type, items.size) }
         .sortedByDescending { it.count }
-
 
     CheckList(
         title = "지역",
