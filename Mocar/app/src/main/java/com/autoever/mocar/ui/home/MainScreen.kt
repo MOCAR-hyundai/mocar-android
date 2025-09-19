@@ -86,7 +86,6 @@ fun MainScreen(rootNavController: NavHostController) {
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 navController = rootNavController,
-                onEditProfileClick = {},
                 onWishListClick = {},
                 onPurchaseListClick = {},
                 onRegisterListClick = {},
