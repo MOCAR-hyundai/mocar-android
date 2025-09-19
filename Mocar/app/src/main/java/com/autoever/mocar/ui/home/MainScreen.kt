@@ -31,7 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.autoever.mocar.model.Car
-import com.autoever.mocar.ui.chat.ChatScreen
+//import com.autoever.mocar.ui.chat.ChatScreen
 import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
 import com.autoever.mocar.ui.search.SearchPage
@@ -88,10 +88,9 @@ fun MainScreen(rootNavController: NavHostController,
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(BottomNavItem.Chat.route)    { ChatScreen() }
+//            composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 navController = rootNavController,
-                onEditProfileClick = {},
                 onWishListClick = {},
                 onPurchaseListClick = {},
                 onRegisterListClick = {},
