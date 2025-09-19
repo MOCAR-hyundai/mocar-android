@@ -1,4 +1,4 @@
-package com.autoever.mocar.model
+package com.autoever.mocar.domain.model
 
 data class Car(
     val id: String,              // 내부 고유 ID
@@ -12,7 +12,7 @@ data class Car(
     val fuel: String,            // 연료 (예: "하이브리드(가솔린)")
     val region: String,          // 지역 (예: "서울")
     val priceKRW: Long,          // 가격 (원)
-    val imageRes: Int,           // drawable 리소스
+    val imageUrl: String?,
     var isFavorite: Boolean = false,
     val brandId: String          // 브랜드 ID
 )
