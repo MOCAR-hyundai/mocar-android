@@ -119,20 +119,20 @@ fun MocarNavigation() {
             )
         }
 
-        composable(
-            route = "search_result/{brandName}/{modelName}",
-            arguments = listOf(
-                navArgument("brandName") { type = NavType.StringType },
-                navArgument("modelName") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val brand = backStackEntry.arguments?.getString("brandName") ?: return@composable
-            val model = backStackEntry.arguments?.getString("modelName") ?: return@composable
-
-            SearchResultScreen(
-                manufacturer = brand,
-                model = model
-            )
-        }
+//        composable(
+//            route = "search_result/{brandName}/{modelName}",
+//            arguments = listOf(
+//                navArgument("brandName") { type = NavType.StringType },
+//                navArgument("modelName") { type = NavType.StringType }
+//            )
+//        ) { backStackEntry ->
+//            val brand = backStackEntry.arguments?.getString("brandName") ?: return@composable
+//            val model = backStackEntry.arguments?.getString("modelName") ?: return@composable
+//
+//            SearchResultScreen(
+//                manufacturer = brand,
+//                model = model
+//            )
+//        }
     }
 }
