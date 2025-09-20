@@ -1,5 +1,6 @@
 package com.autoever.mocar.ui.search
 
+import ROUTE_SEARCH
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,92 +20,112 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.autoever.mocar.R
+import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.viewmodel.ListingViewModel
+import com.autoever.mocar.viewmodel.SearchSharedViewModel
 
 data class carDatas(
     val name: String,
     val count: Int,
-    val imageRes: Int
+    val imageRes: String,
+    val isKorean: Boolean
 )
 
+fun String.isKorean(): Boolean {
+    return this.any { it in '가'..'힣' }
+}
+
+fun List<ListingDto>.toBrandMap(): List<carDatas> {
+    return this.groupBy { it.brand }
+        .map { (brand, items) ->
+            carDatas(
+                name = brand,
+                count = items.size,
+                imageRes = items.firstOrNull()?.images?.firstOrNull().orEmpty(),
+                isKorean = brand.isKorean()
+            )
+        }
+}
+
 @Composable
-fun Manufacturer(navController: NavController, searchQuery: String) {
+fun Manufacturer(navController: NavController,
+                 searchQuery: String,
+                 searchSharedViewModel: SearchSharedViewModel,
+                 listingViewModel: ListingViewModel){
+//                 viewModel: ListingViewModel = viewModel())
 
-    val korCars = listOf(
-        carDatas("현대", 14325, R.drawable.brand_hyundai),
-        carDatas("기아", 23426, R.drawable.brand_kia),
-        carDatas("제네시스", 1234, R.drawable.brand_genesis),
-        carDatas("쉐보레", 3453, R.drawable.brand_chevrolet),
-        carDatas("르노코리아", 45, R.drawable.brand_renault)
-    )
+    val uiState by listingViewModel.uiState.collectAsState()
+    val listings by listingViewModel.listings.collectAsState()
+    val allBrands = listings.toBrandMap()
 
-    val forCars = listOf(
-        carDatas("BMW", 1598, R.drawable.brand_bmw),
-        carDatas("벤츠", 3457, R.drawable.brand_benz),
-        carDatas("아우디", 12345, R.drawable.brand_audi),
-        carDatas("테슬라", 12351, R.drawable.brand_tesla),
-        carDatas("페라리", 23456, R.drawable.brand_ferrari)
-    )
+    val selectedBrand = searchSharedViewModel.selectedBrand
+    val selectedModel = searchSharedViewModel.selectedModel
+    val selectedSubModels = searchSharedViewModel.selectedSubModels
 
-    var selectedBrand by remember { mutableStateOf<String?>(null) }
-    var selectedModel by remember { mutableStateOf<String?>(null) }
-    var showModelSheet by remember { mutableStateOf(false) }
 
-    // ✅ BottomSheet 표시 여부
-    if (showModelSheet && selectedBrand != null) {
-        ModelSelectBottomSheet(
-            brandName = selectedBrand!!,
-            onDismiss = { showModelSheet = false },
-            onConfirm = {
-                selectedModel = it.firstOrNull()
-                showModelSheet = false
-                println("선택된 모델: $selectedModel")
-            }
-        )
-    }
+    println("✅ Brand: ${searchSharedViewModel.selectedBrand}")
+    println("✅ Model: ${searchSharedViewModel.selectedModel}")
+    println("✅ SubModels: ${searchSharedViewModel.selectedSubModels}")
+
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("로딩 중…") // or CircularProgressIndicator()
+        }
+    } else {
     if (selectedBrand != null) {
         // 제조사 + 모델 선택 완료 상태 → 배경 변경 + 요약 박스 표시
         SelectedFilterSummary(
-            brand = selectedBrand!!,
+            brand = selectedBrand,
             model = selectedModel.orEmpty(),
+            subModels = selectedSubModels,
             onBrandClear = {
-                selectedBrand = null
-                selectedModel = null
+                searchSharedViewModel.selectedBrand = null
+                searchSharedViewModel.selectedModel = null
+                searchSharedViewModel.selectedSubModels.clear()
             },
             onModelClear = {
-                selectedModel = null
+                searchSharedViewModel.selectedModel = null
+                searchSharedViewModel.selectedSubModels.clear()
+            },
+            onSubModelClear = {subModelToRemove ->
+                searchSharedViewModel.selectedSubModels.remove(subModelToRemove)
             },
             onModelClick = {
-                showModelSheet = true
+                navController.navigate("model_select/${selectedBrand}")
+            },
+
+            onSubModelClick = {
+                navController.navigate("sub_model_select/${selectedBrand}/${selectedModel}")
             }
         )
     } else {
-        // 제조사 리스트 보여주기
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 10.dp)
         ) {
             item { CategoryLabel("국산차") }
-            items(korCars.size) { index ->
-                val (name, count, imageRes)  = korCars[index]
-                ManufacturerCard(name, count, imageRes) {
-                    selectedBrand = name
-                    showModelSheet = true
+            items(allBrands.size) { index ->
+                val (name, count, imageUrl) = allBrands[index]
+                ManufacturerCard(name, count, imageUrl) {
+                    searchSharedViewModel.isTransitionLoading = true
+                    navController.navigate("model_select/$name")
+                    searchSharedViewModel.selectedBrand = name
                 }
-                if (index < korCars.size - 1) {
+                if (index < allBrands.size - 1) {
                     HorizontalDivider(
                         color = Color(0xFFE0E0E0),
                         thickness = 0.7.dp,
@@ -114,21 +135,22 @@ fun Manufacturer(navController: NavController, searchQuery: String) {
             }
 
             item { CategoryLabel("수입차") }
-            items(forCars.size) { index ->
-                val (name, count, imageRes)  = korCars[index]
-                ManufacturerCard(name, count, imageRes) {
-                    selectedBrand = name
-                    showModelSheet = true
-                }
-                if (index < forCars.size - 1) {
-                    HorizontalDivider(
-                        color = Color(0xFFE0E0E0),
-                        thickness = 0.7.dp,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                }
-            }
+//            items(foreignBrands.size) { index ->
+//                val (name, count, imageUrl) = foreignBrands[index]
+//                ManufacturerCard(name, count, imageUrl) {
+//                    selectedBrand = name
+//                    showModelSheet = true
+//                }
+//                if (index < foreignBrands.size - 1) {
+//                    HorizontalDivider(
+//                        color = Color(0xFFE0E0E0),
+//                        thickness = 0.7.dp,
+//                        modifier = Modifier.padding(horizontal = 8.dp)
+//                    )
+//                }
+//            }
         }
+    }
     }
 }
 
@@ -163,7 +185,7 @@ fun CategoryLabel(text: String) {
 fun ManufacturerCard(
     name: String,
     count: Int,
-    imageRes: Int,
+    imageRes: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -185,13 +207,44 @@ fun ManufacturerCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
+//                AsyncImage(
+//                    model = imageRes,
+//                    contentDescription = "$name 로고",
+//                    modifier = Modifier
+//                        .height(30.dp)
+//                        .width(70.dp)
+//                        .padding(end = 4.dp),
+//                    contentScale = ContentScale.Fit
+//                )
+//                if (imageRes.isNotBlank()) {
+//                    AsyncImage(
+//                        model = imageRes,
+//                        contentDescription = "$name 로고",
+//                        modifier = Modifier
+//                            .height(30.dp)
+//                            .width(70.dp)
+//                            .padding(end = 4.dp),
+//                        contentScale = ContentScale.Fit
+//                    )
+//                } else {
+//                    Image(
+//                        painter = painterResource(id = R.drawable.brand_hyundai),
+//                        contentDescription = "기본 로고",
+//                        modifier = Modifier
+//                            .height(30.dp)
+//                            .width(70.dp)
+//                            .padding(end = 4.dp),
+//                        contentScale = ContentScale.Fit
+//                    )
+//                }
                 Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = "$name 로고",
+                    painter = painterResource(id = R.drawable.brand_hyundai),
+                    contentDescription = "기본 로고",
                     modifier = Modifier
                         .height(30.dp)
                         .width(70.dp)
-                        .padding(end = 4.dp)
+                        .padding(end = 4.dp),
+                    contentScale = ContentScale.Fit
                 )
                 Text(
                     text = name,
@@ -225,142 +278,187 @@ fun ManufacturerCard(
     }
 }
 
-
 @Composable
 fun SelectedFilterSummary(
     brand: String,
     model: String,
+    subModels: List<String>,
     onBrandClear: () -> Unit,
     onModelClear: () -> Unit,
-    onModelClick: () -> Unit
+    onSubModelClear: (String) -> Unit,
+    onModelClick: () -> Unit,
+    onSubModelClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 20.dp)
+            .padding(horizontal = 8.dp)
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.Transparent
-            )
-
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // 제조사
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(60.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 왼쪽: 라벨
                     Text("제조사", fontWeight = FontWeight.Bold)
 
-                    // 오른쪽: 회색 박스 (텍스트 + X 버튼) + → 아이콘
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .background(Color(0xFFEDEDED), RoundedCornerShape(25))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(brand, fontSize = 14.sp)
-
-                            IconButton(
-                                onClick = onBrandClear,
-                                modifier = Modifier.size(18.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Cancel,
-                                    contentDescription = "제조사 초기화",
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextWithClearBox(brand, onClear = onBrandClear)
                         Spacer(modifier = Modifier.width(8.dp))
-
-                        IconButton(
-                            onClick = onBrandClear,
-                            modifier = Modifier.size(18.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForwardIos,
-                                contentDescription = "제조사 다시 선택",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                        ArrowIcon(onClick = onBrandClear)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // 모델
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(60.dp)
+                        .clickable(onClick = onModelClick),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 왼쪽 텍스트
                     Text("모델", fontWeight = FontWeight.Bold)
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if(model != "") {
-                            Row(
-                                modifier = Modifier
-                                    .background(Color(0xFFEDEDED), RoundedCornerShape(25))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(model, fontSize = 14.sp)
-
-                                IconButton(
-                                    onClick = onModelClear,
-                                    modifier = Modifier.size(18.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Cancel,
-                                        contentDescription = "모델 초기화",
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
-                            }
-                        }
-                        else {
-                            Text("선택해 주세요.", fontSize = 14.sp)
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        IconButton(
-                            onClick = onModelClick,
-                            modifier = Modifier.size(18.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForwardIos,
-                                contentDescription = "모델 다시 선택",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(16.dp)
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                        if (model.isNotBlank()) {
+                            SubModelChip(
+                                text = model,
+                                onDelete = onModelClear,
+                            )
+                        } else {
+                            Text(
+                                "선택해 주세요.",
+                                fontSize = 14.sp,
+                                modifier = Modifier.align(Alignment.CenterEnd)
                             )
                         }
                     }
-               }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ArrowIcon(onClick = onModelClick)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 세부모델 라벨 + 화살표
+                if (model.isNotBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .clickable(onClick = onSubModelClick),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("세부모델", fontWeight = FontWeight.Bold)
+                        Row() {
+                            if (subModels.isEmpty()) {
+                                Text(
+                                    "선택해 주세요.",
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            ArrowIcon(onClick = onSubModelClick)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (subModels.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 16.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            subModels.forEach { subModel ->
+                                SubModelChip(text = subModel) {
+                                    onSubModelClear(subModel)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-
     }
 }
 
 
+@Composable
+fun SubModelChip(text: String, onDelete: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .background(Color(0xFFEDEDED), RoundedCornerShape(25))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(end = 20.dp), // 아이콘 공간 확보
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = text, fontSize = 14.sp)
+        }
 
+        Icon(
+            imageVector = Icons.Default.Cancel,
+            contentDescription = "삭제",
+            tint = Color.Gray,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(16.dp)
+                .clickable { onDelete() }
+        )
+    }
+}
+
+@Composable
+fun TextWithClearBox(text: String, onClear: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .background(Color(0xFFEDEDED), RoundedCornerShape(25))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text, fontSize = 14.sp)
+        IconButton(
+            onClick = onClear,
+            modifier = Modifier.size(18.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Cancel,
+                contentDescription = "삭제",
+                tint = Color.Gray,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun ArrowIcon(onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(18.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.ArrowForwardIos,
+            contentDescription = "이동",
+            tint = Color.Gray,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}

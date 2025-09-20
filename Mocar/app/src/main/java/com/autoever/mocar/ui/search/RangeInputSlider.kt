@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.autoever.mocar.viewmodel.SearchFilterViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -104,7 +105,6 @@ fun RangeInputSlider(
     }
 }
 
-
 @Composable
 fun Price(viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
@@ -116,7 +116,6 @@ fun Price(viewModel: SearchFilterViewModel = viewModel()) {
         onValueChange = { viewModel.updatePrice(it) }
     )
 }
-
 
 @Composable
 fun Year(viewModel: SearchFilterViewModel = viewModel()) {
@@ -133,7 +132,6 @@ fun Year(viewModel: SearchFilterViewModel = viewModel()) {
 @Composable
 fun Mileage(viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
-
     RangeInputSlider(
         title = "주행거리",
         unit = "km",
