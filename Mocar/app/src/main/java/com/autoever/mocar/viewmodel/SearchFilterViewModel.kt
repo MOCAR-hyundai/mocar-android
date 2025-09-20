@@ -1,12 +1,18 @@
 package com.autoever.mocar.viewmodel
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.autoever.mocar.data.listings.ListingDto
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.text.contains
 
 data class SearchFilterState(
     val priceRange: ClosedFloatingPointRange<Float> = 0f..10000f,
@@ -16,6 +22,27 @@ data class SearchFilterState(
     val selectedFuels: List<String> = emptyList(),
     val selectedRegions: List<String> = emptyList()
 )
+
+// 화면 로딩
+data class ListingUiState(
+    val isLoading: Boolean = true,
+    val listings: List<ListingDto> = emptyList()
+)
+
+
+class SearchSharedViewModel : ViewModel() {
+
+    var isTransitionLoading by mutableStateOf(false)
+    var selectedBrand by mutableStateOf<String?>(null)
+    var selectedModel by mutableStateOf<String?>(null)
+    var selectedSubModels = mutableStateListOf<String>()
+
+    fun clearAll() {
+        selectedBrand = null
+        selectedModel = null
+        selectedSubModels.clear()
+    }
+}
 
 class SearchFilterViewModel : ViewModel() {
     private val _filterState = MutableStateFlow(SearchFilterState())
@@ -56,36 +83,34 @@ class SearchFilterViewModel : ViewModel() {
         }
     }
 
-    // 초기화
-    fun resetAllFilters() {
+    fun clearAll() {
         _filterState.value = SearchFilterState()
     }
 }
 
-data class ListingData(
-    val brand: String = "",
-    val images: List<String> = emptyList(),
-    val model: String = "",
-    val fuel: String = "",
-    val carType: String? = null, // ← 여기를 nullable로
-    val region: String = "",
-)
-
 
 class ListingViewModel : ViewModel() {
-
+    private var hasFetched = false
     private val db = Firebase.firestore
-    private val _listings = MutableStateFlow<List<ListingData>>(emptyList())
-    val listings: StateFlow<List<ListingData>> = _listings
+    private val _listings = MutableStateFlow<List<ListingDto>>(emptyList())
+    val listings: StateFlow<List<ListingDto>> = _listings
+
+    private val _uiState = MutableStateFlow(ListingUiState())
+    val uiState: StateFlow<ListingUiState> = _uiState
+
 
     init {
         fetchListings()
     }
 
     private fun fetchListings() {
+        if (hasFetched) return
+        hasFetched = true
+
+        _uiState.update { it.copy(isLoading = true) }
         db.collection("listings").get()
             .addOnSuccessListener { result ->
-                Log.d("Firestore", "📦 Fetched documents: ${result.size()}")
+                 Log.d("Firestore", "📦 Fetched documents: ${result.size()}")
 
                 val parsed = result.mapNotNull { doc ->
                     val brand = doc.getString("brand")
@@ -95,31 +120,34 @@ class ListingViewModel : ViewModel() {
                     val region = doc.getString("region")
                     val imageList = doc.get("images") as? List<String> ?: emptyList()
 
-                    // 로그로 각 필드 출력
-                    Log.d("Firestore", "🧩 doc: brand=$brand, model=$model, fuel=$fuel, carType=$carType, region=$region")
+                    val title = doc.getString("title") ?: ""
+                    val year = doc.getLong("year")?.toInt() ?: 0
 
                     if (brand == null || model == null || fuel == null || region == null) {
                         Log.w("Firestore", "⚠️ Skipped doc ${doc.id} due to null required fields")
                         return@mapNotNull null
                     }
 
-                    ListingData(
-                        brand = brand,
-                        images = imageList,
-                        model = model,
-                        fuel = fuel,
-                        carType = carType,
-                        region = region
-                    )
+                    try {
+                        doc.toObject(ListingDto::class.java)
+                    } catch (e: Exception) {
+                        Log.w("Firestore", "⚠️ Failed to parse doc ${doc.id}", e)
+                        null
+                    }
                 }
 
-                Log.d("Firestore", "✅ Parsed listings: ${parsed.size}")
+                _listings.value = parsed
+                _uiState.value = ListingUiState(
+                    isLoading = false,
+                    listings = parsed
+                )
+
+                Log.d("Firestore", "Parsed listings: ${parsed.size}")
                 _listings.value = parsed
             }
             .addOnFailureListener { e ->
-                Log.e("Firestore", "❌ Failed to fetch listings", e)
+                Log.e("Firestore", "Failed to fetch listings", e)
             }
-
     }
 
 }

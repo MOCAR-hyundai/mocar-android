@@ -1,4 +1,8 @@
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -10,9 +14,13 @@ import com.autoever.mocar.ui.auth.LoginPage
 import com.autoever.mocar.ui.auth.SignUpPage
 //import com.autoever.mocar.ui.home.HomeSampleData.cars
 import com.autoever.mocar.ui.home.MainScreen
+import com.autoever.mocar.ui.search.Manufacturer
 import com.autoever.mocar.ui.search.ModelSelect
 import com.autoever.mocar.ui.search.SearchPage
+import com.autoever.mocar.ui.search.SubModelSelect
 import com.autoever.mocar.viewmodel.CarDetailRoute
+import com.autoever.mocar.viewmodel.ListingViewModel
+import com.autoever.mocar.viewmodel.SearchSharedViewModel
 
 // ----- Routes -----
 const val ROUTE_AUTH = "auth"
@@ -24,6 +32,8 @@ fun carDetailRoute(carId: String) = "$ROUTE_CAR_DETAIL/$carId"
 @Composable
 fun MocarNavigation() {
     val navController = rememberNavController()
+    val searchSharedViewModel: SearchSharedViewModel = viewModel()
+    val listingViewModel: ListingViewModel = viewModel()
 //    var cars by remember { mutableStateOf(HomeSampleData.cars) }
 //
 //    val toggleFavorite: (String) -> Unit = { id ->
@@ -43,8 +53,13 @@ fun MocarNavigation() {
             MainScreen(rootNavController = navController)
         }
         composable(ROUTE_SEARCH) {
-            SearchPage(navController,
-                onBack = { navController.popBackStack() }
+            SearchPage(
+                navController = navController,
+                searchSharedViewModel = searchSharedViewModel,
+                listingViewModel = listingViewModel,
+                onBack = {
+                    navController.navigate(ROUTE_MAIN)
+                }
             )
         }
         // 차량 상세
@@ -65,15 +80,59 @@ fun MocarNavigation() {
         composable("login") {
             LoginPage(navController)
         }
-//        composable("modelSelect") {
-//            ModelSelect(
-//
-//                onBack = { navController.popBackStack() },
-//                onConfirm = { selectedModels ->
-//                    println("선택된 모델: $selectedModels")
-//                    navController.popBackStack()
-//                }
-//            )
-//        }
+
+        composable(
+            "model_select/{brandName}",
+            arguments = listOf(navArgument("brandName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val brand = backStackEntry.arguments?.getString("brandName") ?: return@composable
+            val listings by listingViewModel.listings.collectAsState()
+
+            ModelSelect(
+                navController = navController,
+                brandName = brand,
+                allListings = listings,
+                listingViewModel = listingViewModel,
+                searchSharedViewModel = searchSharedViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            "sub_model_select/{brandName}/{modelName}",
+            arguments = listOf(
+                navArgument("brandName") { type = NavType.StringType },
+                navArgument("modelName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val brand = backStackEntry.arguments?.getString("brandName") ?: return@composable
+            val model = backStackEntry.arguments?.getString("modelName") ?: return@composable
+            val listings by listingViewModel.listings.collectAsState()
+
+            SubModelSelect(
+                navController = navController,
+                brandName = brand,
+                modelName = model,
+                allListings = listings,
+                searchSharedViewModel = searchSharedViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "search_result/{brandName}/{modelName}",
+            arguments = listOf(
+                navArgument("brandName") { type = NavType.StringType },
+                navArgument("modelName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val brand = backStackEntry.arguments?.getString("brandName") ?: return@composable
+            val model = backStackEntry.arguments?.getString("modelName") ?: return@composable
+
+            SearchResultScreen(
+                manufacturer = brand,
+                model = model
+            )
+        }
     }
 }

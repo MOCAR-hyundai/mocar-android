@@ -50,11 +50,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autoever.mocar.R
-import com.autoever.mocar.viewmodel.ListingData
+import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchBarViewModel
 import com.autoever.mocar.viewmodel.SearchFilterState
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
+import com.autoever.mocar.viewmodel.SearchSharedViewModel
 import com.autoever.mocar.viewmodel.SearchUiState
 
 
@@ -62,12 +63,13 @@ import com.autoever.mocar.viewmodel.SearchUiState
 @Composable
 fun SearchPage(
     navController: NavController,
+    searchSharedViewModel: SearchSharedViewModel,
+    listingViewModel: ListingViewModel,
     onBack: () -> Unit,
-    filterViewModel: SearchFilterViewModel = viewModel()
+    searchFilterViewModel: SearchFilterViewModel = viewModel()
 ) {
     var selectedMenu by remember { mutableStateOf("제조사") }
-    val listingViewModel: ListingViewModel = viewModel()
-    val listings by listingViewModel.listings.collectAsState()
+    val listings: List<ListingDto> by listingViewModel.listings.collectAsState()
     val context = LocalContext.current.applicationContext as Application
 
     val searchBarViewModel: SearchBarViewModel = viewModel(
@@ -86,7 +88,10 @@ fun SearchPage(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             if (!isSearchActive) {
-                BottomButtons()
+                BottomButtons(
+                    searchFilterViewModel,
+                    searchSharedViewModel)
+
             }
         }
     ) { innerPadding ->
@@ -158,18 +163,19 @@ fun SearchPage(
                     LeftMenu(
                         selected = selectedMenu,
                         onSelect = { selectedMenu = it },
-                        viewModel = filterViewModel
+                        viewModel = searchFilterViewModel,
+                        searchSharedViewModel =searchSharedViewModel
                     )
 
                     Box(modifier = Modifier.weight(1f)) {
                         when (selectedMenu) {
-                            "제조사" -> Manufacturer(navController, "")
-                            "가격" -> Price(viewModel = filterViewModel)
-                            "연식" -> Year(viewModel = filterViewModel)
-                            "주행거리" -> Mileage(viewModel = filterViewModel)
-                            "차종" -> CarType(listings = listings, viewModel = filterViewModel)
-                            "연료" -> Fuel(listings = listings, viewModel = filterViewModel)
-                            "지역" -> Region(listings = listings, viewModel = filterViewModel)
+                            "제조사" -> Manufacturer(navController, "", searchSharedViewModel, listingViewModel)
+                            "가격" -> Price(viewModel = searchFilterViewModel)
+                            "연식" -> Year(viewModel = searchFilterViewModel)
+                            "주행거리" -> Mileage(viewModel = searchFilterViewModel)
+                            "차종" -> CarType(listings = listings, viewModel = searchFilterViewModel)
+                            "연료" -> Fuel(listings = listings, viewModel = searchFilterViewModel)
+                            "지역" -> Region(listings = listings, viewModel = searchFilterViewModel)
                         }
                     }
                 }
@@ -232,9 +238,11 @@ fun SearchBar(
 @Composable
 fun LeftMenu(selected: String,
              onSelect: (String) -> Unit,
-             viewModel: SearchFilterViewModel = viewModel()
+             viewModel: SearchFilterViewModel = viewModel(),
+             searchSharedViewModel: SearchSharedViewModel
 ) {
     val state by viewModel.filterState.collectAsState()
+
     val default = SearchFilterState() // 기본값
 
     val menuItems = listOf("제조사", "가격", "연식", "주행거리", "차종", "연료", "지역")
@@ -253,6 +261,7 @@ fun LeftMenu(selected: String,
     ) {
         menuItems.forEach { item ->
             val isChanged = when (item) {
+                "제조사"   -> searchSharedViewModel.selectedBrand != null
                 "가격"     -> state.priceRange != default.priceRange
                 "연식"     -> state.yearRange != default.yearRange
                 "주행거리" -> state.mileageRange != default.mileageRange
@@ -298,8 +307,11 @@ fun LeftMenu(selected: String,
 
 // 버튼
 @Composable
-fun BottomButtons() {
-    val viewModel: SearchFilterViewModel = viewModel()
+fun BottomButtons(
+    searchFilterViewModel: SearchFilterViewModel,
+    sharedViewModel: SearchSharedViewModel
+) {
+    val state by searchFilterViewModel.filterState.collectAsState()
 
     Row(
         Modifier
@@ -308,7 +320,10 @@ fun BottomButtons() {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         OutlinedButton(
-            onClick = { viewModel.resetAllFilters() },
+            onClick = {
+                searchFilterViewModel.clearAll()
+                sharedViewModel.clearAll()
+                      },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = Color.Black
@@ -326,7 +341,16 @@ fun BottomButtons() {
         Spacer(Modifier.width(8.dp))
 
         Button(
-            onClick = { /* 차량 보기 */ },
+            onClick = {
+                // ✅ 저장된 필터 값 콘솔에 출력하기
+                println("✅ [필터 상태 확인]")
+                println("· 가격 범위: ${state.priceRange.start.toInt()} ~ ${state.priceRange.endInclusive.toInt()} 만원")
+                println("· 연식 범위: ${state.yearRange.start.toInt()} ~ ${state.yearRange.endInclusive.toInt()} 년")
+                println("· 주행거리: ${state.mileageRange.start.toInt()} ~ ${state.mileageRange.endInclusive.toInt()} km")
+                println("· 선택된 차종: ${state.selectedTypes.joinToString(", ")}")
+                println("· 선택된 연료: ${state.selectedFuels.joinToString(", ")}")
+                println("· 선택된 지역: ${state.selectedRegions.joinToString(", ")}")
+            },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
                 contentColor = Color.White
@@ -353,7 +377,7 @@ fun SearchFullScreen(
     onRemoveKeyword: (String) -> Unit,
     onClearAll: () -> Unit,
     onSearchSubmit: () -> Unit,
-    onCarClick: (ListingData) -> Unit
+    onCarClick: (ListingDto) -> Unit
 ) {
     Column(modifier = Modifier
         .fillMaxSize()

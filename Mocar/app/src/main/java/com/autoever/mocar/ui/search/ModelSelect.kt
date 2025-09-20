@@ -1,32 +1,31 @@
 package com.autoever.mocar.ui.search
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.autoever.mocar.R
-import com.autoever.mocar.viewmodel.ListingData
+import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.viewmodel.ListingViewModel
+import com.autoever.mocar.viewmodel.SearchSharedViewModel
 
 @Composable
 fun ModelSelect(
     brandName: String,
-    allListings: List<ListingData>,
+    allListings: List<ListingDto>,
+    navController: NavController,
+    searchSharedViewModel: SearchSharedViewModel,
+    listingViewModel: ListingViewModel,
     onBack: () -> Unit = {},
-    onConfirm: (List<String>) -> Unit = {}
 ) {
     val filteredModels = allListings
         .filter { it.brand == brandName }
@@ -37,16 +36,17 @@ fun ModelSelect(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
         // 상단 바
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 4.dp)
+            modifier = Modifier.padding(vertical = 10.dp)
         ) {
             IconButton(onClick = onBack,
                 modifier = Modifier.size(38.dp)) {
-                Icon(painterResource(id = R.drawable.ic_back), contentDescription = "뒤로",
+                Icon(painterResource(id = R.drawable.ic_back),
+                    contentDescription = "뒤로",
                     modifier = Modifier.size(18.dp),
                     tint = Color.Black
                 )
@@ -68,9 +68,8 @@ fun ModelSelect(
                 ModelRow(
                     name = model,
                     count = count,
-                    selected = false,
                     onSelect = {
-                        onConfirm(listOf(model))
+                        navController.navigate("sub_model_select/${brandName}/${model}")
                     }
                 )
                 if (index < filteredModels.size - 1) {
@@ -89,7 +88,6 @@ fun ModelSelect(
 fun ModelRow(
     name: String,
     count: Int,
-    selected: Boolean = false,
     onSelect: () -> Unit
 ) {
     val isEnabled = count > 0
@@ -125,31 +123,5 @@ fun ModelRow(
             )
         }
 
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ModelSelectBottomSheet(
-    brandName: String,
-    allListings: List<ListingData>,
-    onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        containerColor = Color(0xFFF8F8F8)
-    ) {
-        ModelSelect(
-            brandName = brandName,
-            allListings = allListings,
-            onBack = onDismiss,
-            onConfirm = {
-                onConfirm(it)
-                onDismiss()
-            }
-        )
     }
 }

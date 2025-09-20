@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.autoever.mocar.viewmodel.ListingData
+import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -128,7 +128,7 @@ fun SelectableItemRow(
 }
 
 @Composable
-fun CarType(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewModel()) {
+fun CarType(listings: List<ListingDto>, viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
 
     val carTypes = listings
@@ -145,7 +145,7 @@ fun CarType(listings: List<ListingData>, viewModel: SearchFilterViewModel = view
 }
 
 @Composable
-fun Fuel(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewModel()) {
+fun Fuel(listings: List<ListingDto>, viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
 
     val fuels = listings
@@ -162,7 +162,7 @@ fun Fuel(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewMod
 }
 
 @Composable
-fun Region(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewModel()) {
+fun Region(listings: List<ListingDto>, viewModel: SearchFilterViewModel = viewModel()) {
     val state by viewModel.filterState.collectAsState()
 
     val regions = listings
@@ -178,13 +178,13 @@ fun Region(listings: List<ListingData>, viewModel: SearchFilterViewModel = viewM
     )
 }
 
-fun List<ListingData>.toSelectableMap(keySelector: (ListingData) -> String): List<SelectableItem> {
+fun List<ListingDto>.toSelectableMap(keySelector: (ListingDto) -> String): List<SelectableItem> {
     return this.groupBy(keySelector).map { (key, items) ->
         SelectableItem(name = key, count = items.size)
     }
 }
 
-fun List<ListingData>.toModelMapPerBrand(): Map<String, List<SelectableItem>> {
+fun List<ListingDto>.toModelMapPerBrand(): Map<String, List<SelectableItem>> {
     return this.groupBy { it.brand }
         .mapValues { (_, brandItems) ->
             brandItems.groupBy { it.model }

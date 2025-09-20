@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.autoever.mocar.data.listings.ListingDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -13,7 +14,7 @@ data class SearchUiState(
     val query: String = "",
     val results: List<String> = emptyList(),
     val recentKeywords: List<String> = emptyList(),
-    val searchResults: List<ListingData> = emptyList()
+    val searchResults: List<ListingDto> = emptyList()
 )
 
 class SearchBarViewModel(
@@ -96,7 +97,7 @@ class SearchBarViewModel(
         saveKeywordsToPrefs(emptyList())  // 저장
     }
 
-    fun selectCar(car: ListingData) {
+    fun selectCar(car: ListingDto) {
         val keyword = "${car.brand} ${car.model}"
         _uiState.update {
             it.copy(
