@@ -16,11 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class BrandUi(val id: String, val name: String, val logoRes: Int)
+import coil.compose.AsyncImage
 
 @Composable
 fun BrandChip(
@@ -43,13 +44,23 @@ fun BrandChip(
                 .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(id = brand.logoRes),
-                contentDescription = brand.name,
-                modifier = Modifier.size(36.dp)
-            )
+            if (brand.logoUrl != null) {
+                AsyncImage(
+                    model = brand.logoUrl,
+                    contentDescription = brand.name,
+                    modifier = Modifier.size(36.dp),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE5E7EB))
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
-        Text(brand.name, fontSize = 12.sp)
+        Text(brand.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

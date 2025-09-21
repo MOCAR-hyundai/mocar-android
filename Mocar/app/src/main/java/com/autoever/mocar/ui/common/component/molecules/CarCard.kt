@@ -35,7 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.autoever.mocar.ui.home.formatKrwPretty
+import com.autoever.mocar.ui.common.util.formatKrwPretty
 
 data class CarUi(
     val id: String,

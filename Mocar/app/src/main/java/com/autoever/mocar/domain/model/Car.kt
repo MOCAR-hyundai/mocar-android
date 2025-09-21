@@ -12,7 +12,10 @@ data class Car(
     val fuel: String,            // 연료 (예: "하이브리드(가솔린)")
     val region: String,          // 지역 (예: "서울")
     val priceKRW: Long,          // 가격 (원)
+    val images: List<String>,
     val imageUrl: String?,
     var isFavorite: Boolean = false,
-    val brandId: String          // 브랜드 ID
+    val brandId: String,          // 브랜드 ID
+    val brandName: String = "",
+    val description: String? = null
 )

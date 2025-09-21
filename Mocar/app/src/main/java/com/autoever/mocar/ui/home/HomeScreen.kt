@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,6 +39,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,19 +55,19 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import carDetailRoute
 import com.autoever.mocar.R
-import com.autoever.mocar.model.Brand
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.ui.common.component.atoms.BrandChip
 import com.autoever.mocar.ui.common.component.atoms.BrandUi
 import com.autoever.mocar.ui.common.component.molecules.CarCard
 import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.autoever.mocar.ui.common.component.molecules.FavoriteCarousel
-//import com.autoever.mocar.ui.home.HomeSampleData.brands as sampleBrands
+import com.autoever.mocar.viewmodel.HomeViewModel
 
 @Composable
 fun HomeRoute(
     navController: NavController,
-    vm: com.autoever.mocar.viewmodel.HomeViewModel =
+    scrollSignal: Int,
+    vm: HomeViewModel =
         androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val state by vm.uiState.collectAsState()
@@ -75,7 +78,9 @@ fun HomeRoute(
         else -> HomeScreen(
             navController = navController,
             cars = state.cars,
-            onToggleFavorite = { vm.toggleFavorite(it) }
+            brands = state.brands,
+            onToggleFavorite = { vm.toggleFavorite(it) },
+            scrollSignal = scrollSignal
         )
     }
 }
@@ -85,16 +90,36 @@ fun HomeRoute(
 fun HomeScreen(
     navController: NavController,
     cars: List<Car>,
-    onToggleFavorite: (String) -> Unit
+    brands: List<BrandUi>,
+    onToggleFavorite: (String) -> Unit,
+    scrollSignal: Int
 ) {
     val gutter = 22.dp
     var selectedBrandId by remember { mutableStateOf<String?>(null) }
 
-    val filtered = remember(selectedBrandId, cars) {
-        if (selectedBrandId == null) cars else cars.filter { it.brandId == selectedBrandId }
+    val selectedBrandName = remember(selectedBrandId, brands) {
+        brands.firstOrNull { it.id == selectedBrandId }?.name
+    }
+
+    val listState = rememberLazyListState()
+
+    // 🔹 시그널 값이 바뀔 때마다 맨 위로 스크롤
+    LaunchedEffect(scrollSignal) {
+        if (scrollSignal > 0) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
+    val filtered = remember(selectedBrandName, cars) {
+        if (selectedBrandName.isNullOrBlank()) {
+            cars
+        } else {
+            cars.filter { it.brandName.equals(selectedBrandName, ignoreCase = true) }
+        }
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8F8F8)),
@@ -125,38 +150,38 @@ fun HomeScreen(
             )
         }
 
-        // 브랜드 선택
-//        item {
-//            Text("Brands", style = MaterialTheme.typography.titleMedium)
-//            Spacer(Modifier.height(12.dp))
-//            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-//                items(sampleBrands, key = { it.id }) { brand ->
-//                    BrandChip(
-//                        brand = brand.toUi(),
-//                        selected = selectedBrandId == brand.id,
-//                        onClick = {
-//                            selectedBrandId =
-//                                if (selectedBrandId == brand.id) null else brand.id
-//                        }
-//                    )
-//                }
-//            }
-//        }
+      //브랜드 선택
+        item {
+            Text("Brands", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(brands, key = { it.id }) { brand ->
+                    BrandChip(
+                        brand = brand,
+                        selected = selectedBrandId == brand.id,
+                        onClick = {
+                            selectedBrandId =
+                                if (selectedBrandId == brand.id) null else brand.id
+                        }
+                    )
+                }
+            }
+        }
 
         // 필터 결과 헤더
-//        item {
-//            val title = if (selectedBrandId == null) {
-//                "전체 차량"
-//            } else {
-//                sampleBrands.firstOrNull { it.id == selectedBrandId }?.name ?: "필터 결과"
-//            }
-//            SectionHeader(
-//                title = title,
-//                subtitle = "Available",
-//                actionText = if (selectedBrandId != null) "Clear" else null,
-//                onActionClick = { selectedBrandId = null }
-//            )
-//        }
+        item {
+            val title = if (selectedBrandId == null) {
+                "전체 차량"
+            } else {
+                brands.firstOrNull { it.id == selectedBrandId }?.name ?: "필터 결과"
+            }
+            SectionHeader(
+                title = title,
+                subtitle = "Available",
+                actionText = if (selectedBrandId != null) "Clear" else null,
+                onActionClick = { selectedBrandId = null }
+            )
+        }
 
         // 차량 카드 2열 그리드
         items(filtered.chunked(2)) { row ->
@@ -190,12 +215,6 @@ private fun Car.toUi() = CarUi(
     region = region,
     priceKRW = priceKRW,
     isFavorite = isFavorite
-)
-
-private fun Brand.toUi() = BrandUi(
-    id = id,
-    name = name,
-    logoRes = logoRes
 )
 
 /* ---------------- TopBar ---------------- */
@@ -311,12 +330,12 @@ private fun SectionHeader(
 }
 
 /* ---------------- 가격 포맷터 ---------------- */
-fun formatKrwPretty(amount: Long): String {
-    val eok = amount / 100_000_000
-    val man = (amount % 100_000_000) / 10_000
-    return when {
-        eok > 0L && man > 0L -> "${eok}억 ${String.format("%,d만원", man)}"
-        eok > 0L && man == 0L -> "${eok}억"
-        else -> String.format("%,d만원", man)
-    }
-}
+//fun formatKrwPretty(amount: Long): String {
+//    val eok = amount / 100_000_000
+//    val man = (amount % 100_000_000) / 10_000
+//    return when {
+//        eok > 0L && man > 0L -> "${eok}억 ${String.format("%,d만원", man)}"
+//        eok > 0L && man == 0L -> "${eok}억"
+//        else -> String.format("%,d만원", man)
+//    }
+//}

@@ -1,6 +1,8 @@
 package com.autoever.mocar.repository
 
+import com.autoever.mocar.data.brands.BrandDto
 import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.data.price.PriceIndexDto
 import kotlinx.coroutines.flow.Flow
 
 interface MocarRepository {
@@ -10,5 +12,10 @@ interface MocarRepository {
     fun myFavoriteListingIds(userId: String): Flow<Set<String>>
     /** 토글 찜 */
     suspend fun toggleFavorite(userId: String, listingId: String)
+
     fun listingById(listingId: String): Flow<ListingDto?>
+
+    fun brands(): Flow<List<BrandDto>>
+
+    fun priceIndexById(id: String): Flow<PriceIndexDto?>
 }
