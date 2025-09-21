@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+
 data class SearchUiState(
     val query: String = "",
     val results: List<String> = emptyList(),
@@ -44,6 +45,7 @@ class SearchBarViewModel(
     }
 
     fun activateSearch() {
+        println("📣 activateSearch called")
         _isSearchActive.value = true
     }
 
@@ -99,10 +101,10 @@ class SearchBarViewModel(
 
     fun selectCar(car: ListingDto) {
         val keyword = "${car.brand} ${car.model}"
+        val updated = (listOf(keyword) + _uiState.value.recentKeywords).distinct().take(10)
         _uiState.update {
-            it.copy(
-                recentKeywords = (listOf(keyword) + it.recentKeywords).distinct().take(10)
-            )
+            it.copy(recentKeywords = updated)
         }
+        saveKeywordsToPrefs(updated)
     }
 }
