@@ -3,6 +3,7 @@ package com.autoever.mocar.repository
 import com.autoever.mocar.data.brands.BrandDto
 import com.autoever.mocar.data.favorites.FavoriteDto
 import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.data.price.PriceIndexDto
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
@@ -81,4 +82,24 @@ class FirebaseMocarRepository(
             }
         awaitClose { sub.remove() }
     }
+
+    override fun priceIndexById(id: String): Flow<PriceIndexDto?> =
+        callbackFlow {
+            val ref = db.collection("priceIndex").document(id)
+            val reg = ref.addSnapshotListener { snap, err ->
+                if (err != null) { trySend(null); return@addSnapshotListener }
+                if (snap != null && snap.exists()) {
+                    trySend(
+                        PriceIndexDto(
+                            id = snap.getString("id") ?: snap.id,
+                            minPrice = (snap.getLong("minPrice") ?: 0).toLong(),
+                            avgPrice = (snap.getLong("avgPrice") ?: 0).toLong(),
+                            maxPrice = (snap.getLong("maxPrice") ?: 0).toLong(),
+                            mileageBucket = (snap.get("mileageBucket") as? Map<String, Long?>) ?: emptyMap()
+                        )
+                    )
+                } else trySend(null)
+            }
+            awaitClose { reg.remove() }
+        }
 }

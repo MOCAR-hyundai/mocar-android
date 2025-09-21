@@ -2,6 +2,7 @@ package com.autoever.mocar.repository
 
 import com.autoever.mocar.data.brands.BrandDto
 import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.data.price.PriceIndexDto
 import kotlinx.coroutines.flow.Flow
 
 interface MocarRepository {
@@ -15,4 +16,6 @@ interface MocarRepository {
     fun listingById(listingId: String): Flow<ListingDto?>
 
     fun brands(): Flow<List<BrandDto>>
+
+    fun priceIndexById(id: String): Flow<PriceIndexDto?>
 }

@@ -16,5 +16,6 @@ data class Car(
     val imageUrl: String?,
     var isFavorite: Boolean = false,
     val brandId: String,          // 브랜드 ID
-    val brandName: String = ""
+    val brandName: String = "",
+    val description: String? = null
 )
