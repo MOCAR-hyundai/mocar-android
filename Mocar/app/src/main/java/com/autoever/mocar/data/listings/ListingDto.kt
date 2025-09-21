@@ -22,5 +22,7 @@ data class ListingDto(
     val description: String = "",
     val images: List<String> = emptyList(),
     val status: String = "on_sale",
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
+    val stats: Map<String, Any>? = null
 )

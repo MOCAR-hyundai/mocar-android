@@ -1,5 +1,6 @@
 package com.autoever.mocar.ui.home
 
+import ROUTE_SEARCH
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,7 +40,6 @@ import com.autoever.mocar.ui.chat.ChatScreen
 //import com.autoever.mocar.ui.home.HomeSampleData.cars
 import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
-import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.sell.SellCarScreen
 import com.google.android.play.integrity.internal.f
 
@@ -93,15 +94,11 @@ fun MainScreen(rootNavController: NavHostController) {
             }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
             composable(BottomNavItem.Search.route)  {
-                SearchPage(
-                    navController=rootNavController,
-                    onBack = { navController.popBackStack() }
-                )
+                rootNavController.navigate(ROUTE_SEARCH)
             }
             composable(BottomNavItem.Chat.route)    { ChatScreen() }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 navController = rootNavController,
-                onEditProfileClick = {},
                 onWishListClick = {},
                 onPurchaseListClick = {},
                 onRegisterListClick = {},
