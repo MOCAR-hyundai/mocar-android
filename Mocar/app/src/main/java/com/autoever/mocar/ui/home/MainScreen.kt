@@ -18,6 +18,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +40,7 @@ import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
 import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.sell.SellCarScreen
+import com.google.android.play.integrity.internal.f
 
 @Composable
 fun MainScreen(rootNavController: NavHostController) {
@@ -49,6 +53,8 @@ fun MainScreen(rootNavController: NavHostController) {
         BottomNavItem.MyPage
     )
 
+    var homeScrollSignal by remember { mutableStateOf(0) }
+
     Scaffold(
         containerColor = Color(0xFFF8F8F8),
         bottomBar = {
@@ -59,6 +65,13 @@ fun MainScreen(rootNavController: NavHostController) {
                 items = items,
                 selectedRoute = currentRoute,
                 onSelect = { route ->
+                    if (route == currentRoute) {
+                        //같은 탭을 다시 클릭한 경우
+                        if (route == BottomNavItem.BuyCar.route) {
+                            homeScrollSignal++      // home으로 올라가라고 신호
+                        }
+                        return@MocarBottomBarPill
+                    }
                     navController.navigate(route) {
                         popUpTo(navController.graph.startDestinationId) { saveState = true }
                         launchSingleTop = true
@@ -74,7 +87,9 @@ fun MainScreen(rootNavController: NavHostController) {
             modifier = Modifier.padding(inner)
         ) {
             composable(BottomNavItem.BuyCar.route)  {
-                HomeRoute(navController = rootNavController)
+                HomeRoute(navController = rootNavController,
+                        scrollSignal = homeScrollSignal
+                )
             }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
             composable(BottomNavItem.Search.route)  {

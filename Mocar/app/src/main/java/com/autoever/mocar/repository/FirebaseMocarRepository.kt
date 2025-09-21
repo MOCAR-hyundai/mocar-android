@@ -1,8 +1,10 @@
 package com.autoever.mocar.repository
 
+import com.autoever.mocar.data.brands.BrandDto
 import com.autoever.mocar.data.favorites.FavoriteDto
 import com.autoever.mocar.data.listings.ListingDto
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -60,5 +62,23 @@ class FirebaseMocarRepository(
                 trySend(snap?.toObject(ListingDto::class.java))
             }
         awaitClose { reg.remove() }
+    }
+
+    override fun brands(): Flow<List<BrandDto>> = callbackFlow {
+        val sub = db.collection("car_brand")
+            .orderBy("order")
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    close(e)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val result = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(BrandDto::class.java)
+                    }
+                    trySend(result)
+                }
+            }
+        awaitClose { sub.remove() }
     }
 }

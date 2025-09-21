@@ -1,6 +1,7 @@
 package com.autoever.mocar.ui.detail
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,21 +51,17 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.autoever.mocar.R
 import com.autoever.mocar.domain.model.Car
+import com.autoever.mocar.domain.model.Seller
 import com.autoever.mocar.ui.home.formatKrwPretty
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CarDetailScreen(
     car: Car,
+    seller: Seller?,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    // car가 null이면 간단히 종료
-//    if (car == null) {
-//        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-//            Text("차량 정보를 찾을 수 없습니다.")
-//        }
-//        return
-//    }
 
     var isFav by remember(car.id) { mutableStateOf(car.isFavorite) }
 
@@ -91,26 +90,30 @@ fun CarDetailScreen(
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
+                val pagerState = rememberPagerState(pageCount = { car.images.size.coerceAtLeast(1) })
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(260.dp)
                         .background(Color.White)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (car.imageUrl != null) {
+                    if (car.images.isNotEmpty()) {
+                        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                             AsyncImage(
-                                model = car.imageUrl,
+                                model = car.images[page],
                                 contentDescription = car.title,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
-                        } else {
-                            Box(Modifier.fillMaxSize().background(Color(0xFFF3F4F6)))
                         }
-                        Spacer(Modifier.height(8.dp))
-                        DotsIndicator(total = 4, selected = 1)
+                    } else {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFF3F4F6))
+                        )
                     }
+
                     HeartButton(
                         isFavorite = isFav,
                         onClick = {
@@ -120,6 +123,14 @@ fun CarDetailScreen(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(12.dp)
+                    )
+
+                    DotsIndicator(
+                        total = car.images.size.coerceAtLeast(1),
+                        selected = pagerState.currentPage + 1,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 8.dp)
                     )
                 }
             }
@@ -150,11 +161,14 @@ fun CarDetailScreen(
 
             // 판매자 카드
             item {
-                SellerCard(
-                    name = "Hela Quintin",
-                    rating = 5.0,
-                    reviewCount = 100
-                )
+                seller?.let {
+                    SellerCard(
+                        name = it.name,
+                        rating = it.rating,
+                        reviewCount = it.ratingCount,
+                        photoUrl = it.photoUrl
+                    )
+                }
             }
 
             // 기본 정보
@@ -254,14 +268,27 @@ private fun HeartButton(
 /* ---------------- Dots ---------------- */
 
 @Composable
-private fun DotsIndicator(total: Int, selected: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+private fun DotsIndicator(
+    total: Int,
+    selected: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0x66000000)) // 살짝 어두운 배경(옵션)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         repeat(total) { idx ->
             Box(
                 modifier = Modifier
                     .size(if (idx + 1 == selected) 7.dp else 6.dp)
                     .clip(CircleShape)
-                    .background(if (idx + 1 == selected) Color(0xFF2A5BFF) else Color(0xFFE5E7EB))
+                    .background(
+                        if (idx + 1 == selected) Color.White else Color(0xFFDDDDDD)
+                    )
             )
         }
     }
@@ -270,7 +297,12 @@ private fun DotsIndicator(total: Int, selected: Int) {
 /* ---------------- Seller Card ---------------- */
 
 @Composable
-private fun SellerCard(name: String, rating: Double, reviewCount: Int) {
+private fun SellerCard(
+    name: String,
+    rating: Double,
+    reviewCount: Int,
+    photoUrl: String
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,12 +318,21 @@ private fun SellerCard(name: String, rating: Double, reviewCount: Int) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = CircleShape, color = Color(0xFFEDEDED)) {
-                    Image(
-                        painter = painterResource(id = R.drawable.sample_avatar), // 없으면 기본 원
-                        contentDescription = null,
-                        modifier = Modifier.size(44.dp),
-                        contentScale = ContentScale.Crop
-                    )
+                    if (photoUrl.isNotEmpty()) {
+                        coil.compose.AsyncImage(
+                            model = photoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.size(44.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.sample_avatar),
+                            contentDescription = null,
+                            modifier = Modifier.size(44.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
@@ -308,6 +349,7 @@ private fun SellerCard(name: String, rating: Double, reviewCount: Int) {
         }
     }
 }
+
 
 /* ---------------- Section Card ---------------- */
 

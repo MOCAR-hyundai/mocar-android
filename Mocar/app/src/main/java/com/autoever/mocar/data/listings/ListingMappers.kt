@@ -14,7 +14,9 @@ fun ListingDto.toCar(isFavorite: Boolean): Car = Car(
     fuel = fuel,
     region = region,
     priceKRW = price,
+    images = images,
     imageUrl = images.firstOrNull(),
     isFavorite = isFavorite,
-    brandId = brand
+    brandId = "",
+    brandName = brand
 )
