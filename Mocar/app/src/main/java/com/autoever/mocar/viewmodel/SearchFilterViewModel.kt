@@ -48,6 +48,7 @@ data class SearchRecordItem(
     val selectedRegions: List<String>
 )
 
+// 필터 > 상세정보
 data class FilterParams(
     val brand: String?,
     val model: String?,
@@ -201,8 +202,6 @@ class SearchFilterViewModel(application: Application) : AndroidViewModel(applica
             return null
         }
     }
-
-
 
 
     fun saveHistoryToPrefs(list: List<SearchRecordItem>) {
