@@ -7,6 +7,7 @@ import java.security.Timestamp
 data class ListingDto(
     val listingId: String = "",
     val plateNo: String = "",
+    val ownerName: String = "",
     val sellerId: String = "",
     val title: String = "",
     val brand: String = "",
@@ -32,6 +33,3 @@ fun ListingDto.priceIndexId(): String {
     // 예: "BMW_3시리즈 (E90)_201103"
     return "${brand}_${model}_${year}"
 }
-
-private fun sanitize(s: String) =
-    s.trim().replace(Regex("\\s+"), " ")
