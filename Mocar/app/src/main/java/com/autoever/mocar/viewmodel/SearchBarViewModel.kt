@@ -1,15 +1,19 @@
 package com.autoever.mocar.viewmodel
 
 import android.app.Application
-import android.content.Context
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.autoever.mocar.data.listings.ListingDto
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
 
 data class SearchUiState(
     val query: String = "",
@@ -23,16 +27,16 @@ class SearchBarViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val prefs = application.getSharedPreferences("search_prefs", Context.MODE_PRIVATE)
+    private val db = Firebase.firestore
+    private val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "guest_user"
 
-    private val _uiState = MutableStateFlow(
-        SearchUiState(
-            recentKeywords = loadKeywordsFromPrefs()  // 초기 로드
-        )
-    )
+    private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState
+
     private val _isSearchActive = MutableStateFlow(false)
     val isSearchActive: StateFlow<Boolean> = _isSearchActive
+
+    private var keywordDocMap = mutableMapOf<String, String>()
 
     init {
         viewModelScope.launch {
@@ -45,7 +49,6 @@ class SearchBarViewModel(
     }
 
     fun activateSearch() {
-        println("📣 activateSearch called")
         _isSearchActive.value = true
     }
 
@@ -62,7 +65,9 @@ class SearchBarViewModel(
                     emptyList()
                 } else {
                     listings.filter { listing ->
-                        listing.brand.contains(query, ignoreCase = true) ||
+                        val brandModel = "${listing.brand} ${listing.model}".lowercase()
+                        brandModel.contains(query.lowercase().trim()) ||
+                                listing.brand.contains(query, ignoreCase = true) ||
                                 listing.model.contains(query, ignoreCase = true)
                     }
                 }
@@ -70,41 +75,110 @@ class SearchBarViewModel(
         }
     }
 
-    private fun loadKeywordsFromPrefs(): List<String> {
-        val set = prefs.getStringSet("recent_keywords", emptySet()) ?: emptySet()
-        return set.toList()
+    fun loadRecentKeywords(userId: String) {
+        db.collection("recent_keyword")
+            .whereEqualTo("userId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                val sortedDocs =
+                    result.sortedByDescending { it.getTimestamp("timestamp")?.toDate() }
+                val keywords = sortedDocs.mapNotNull { doc ->
+                    val keyword = doc.getString("keyword")
+                    if (keyword != null) {
+                        keywordDocMap[keyword] = doc.id
+                    }
+                    keyword
+                }
+                _uiState.update { it.copy(recentKeywords = keywords.take(10)) }
+            }
     }
 
-    private fun saveKeywordsToPrefs(keywords: List<String>) {
-        prefs.edit().putStringSet("recent_keywords", keywords.toSet()).apply()
-    }
-
-    fun submitSearch() {
+    fun submitSearch(userId: String) {
         val keyword = _uiState.value.query.trim()
-        if (keyword.isNotEmpty()) {
-            val updated = (listOf(keyword) + _uiState.value.recentKeywords).distinct().take(10)
-            _uiState.update { it.copy(recentKeywords = updated) }
-            saveKeywordsToPrefs(updated) // 저장
-        }
+        if (keyword.isBlank()) return
+
+        val collection = db.collection("recent_keyword")
+
+        collection
+            .whereEqualTo("userId", userId)
+            .whereEqualTo("keyword", keyword)
+            .get()
+            .addOnSuccessListener { result ->
+                if (result.isEmpty) {
+                    // 추가
+                    val data = mapOf(
+                        "userId" to userId,
+                        "keyword" to keyword,
+                        "timestamp" to FieldValue.serverTimestamp()
+                    )
+                    collection.add(data).addOnSuccessListener {
+                        loadRecentKeywords(userId)
+                        trimKeywordCount(userId) // 개수 유지
+                    }
+                } else {
+                    // 갱신
+                    val docId = result.first().id
+                    collection.document(docId)
+                        .update("timestamp", FieldValue.serverTimestamp())
+                        .addOnSuccessListener {
+                            loadRecentKeywords(userId)
+                        }
+                }
+            }
     }
 
     fun removeKeyword(keyword: String) {
-        val updated = _uiState.value.recentKeywords - keyword
-        _uiState.update { it.copy(recentKeywords = updated) }
-        saveKeywordsToPrefs(updated)  // 저장
-    }
-
-    fun clearAllKeywords() {
-        _uiState.update { it.copy(recentKeywords = emptyList()) }
-        saveKeywordsToPrefs(emptyList())  // 저장
-    }
-
-    fun selectCar(car: ListingDto) {
-        val keyword = "${car.brand} ${car.model}"
-        val updated = (listOf(keyword) + _uiState.value.recentKeywords).distinct().take(10)
-        _uiState.update {
-            it.copy(recentKeywords = updated)
+        val docId = keywordDocMap[keyword]
+        if (docId == null) {
+            Log.e("Firestore", "삭제 실패: docId 없음 for keyword: $keyword")
+            return
         }
-        saveKeywordsToPrefs(updated)
+
+        db.collection("recent_keyword").document(docId)
+            .delete()
+            .addOnSuccessListener {
+                Log.d("Firestore", "✅ 삭제 성공: $keyword ($docId)")
+                keywordDocMap.remove(keyword)
+                _uiState.update {
+                    it.copy(recentKeywords = it.recentKeywords - keyword)
+                }
+            }
+            .addOnFailureListener {
+                Log.e("Firestore", "Firestore 삭제 실패", it)
+            }
+    }
+
+    private fun trimKeywordCount(userId: String) {
+        db.collection("recent_keyword")
+            .whereEqualTo("userId", userId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { result ->
+                val toDelete = result.drop(10)
+                toDelete.forEach { doc ->
+                    db.collection("recent_keyword").document(doc.id).delete()
+                }
+            }
+    }
+
+    fun clearAllKeywords(userId: String) {
+        db.collection("recent_keyword")
+            .whereEqualTo("userId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                result.forEach { doc ->
+                    db.collection("recent_keyword").document(doc.id).delete()
+                }
+                keywordDocMap.clear()
+                _uiState.update { it.copy(recentKeywords = emptyList()) }
+            }
+    }
+
+    fun selectCar(car: ListingDto, userId: String) {
+        val keyword = "${car.brand} ${car.model}"
+        _uiState.update {
+            it.copy(query = keyword)
+        }
+        submitSearch(userId)
     }
 }
