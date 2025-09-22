@@ -53,6 +53,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autoever.mocar.R
 import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.viewmodel.FilterParams
 import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchBarViewModel
 import com.autoever.mocar.viewmodel.SearchFilterState
@@ -61,7 +62,6 @@ import com.autoever.mocar.viewmodel.SearchRecordItem
 import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
 import com.autoever.mocar.viewmodel.SearchUiState
 import kotlin.collections.filter
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -420,6 +420,13 @@ fun BottomButtons(
                     selectedRegions = state.selectedRegions
                 )
                 searchFilterViewModel.saveSearchRecord(record)
+
+                searchFilterViewModel.setFilterParamsFromCurrentState(
+                    brand = searchManufacturerViewModel.selectedBrand,
+                    model = searchManufacturerViewModel.selectedModel,
+                    subModels = searchManufacturerViewModel.selectedSubModels,
+                    filterState = searchFilterViewModel.filterState.value
+                )
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
