@@ -2,26 +2,21 @@ import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.autoever.mocar.ui.detail.CarDetailScreen
-//import com.autoever.mocar.ui.home.HomeSampleData
 import com.autoever.mocar.ui.auth.LoginPage
 import com.autoever.mocar.ui.auth.SignUpPage
-//import com.autoever.mocar.ui.home.HomeSampleData.cars
 import com.autoever.mocar.ui.home.MainScreen
 import com.autoever.mocar.ui.search.ModelSelect
 import com.autoever.mocar.ui.search.SearchHistoryScreen
 import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.search.SubModelSelect
+import com.autoever.mocar.ui.mypage.LikeListScreen
 import com.autoever.mocar.viewmodel.CarDetailRoute
 import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
@@ -129,6 +124,15 @@ fun MocarNavigation() {
                 searchFilterViewModel = searchFilterViewModel,
                 searchManufacturerViewModel = manufacturerViewModel,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("like_list") {
+            LikeListScreen(
+                navController = navController,
+                onCarClick = { carId ->
+                    navController.navigate("carDetail/$carId")
+                }
             )
         }
 
