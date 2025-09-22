@@ -60,7 +60,7 @@ fun MocarNavigation() {
                 searchFilterViewModel = searchFilterViewModel,
                 listingViewModel = listingViewModel,
                 onBack = {
-                    navController.navigate(ROUTE_MAIN)
+                    navController.popBackStack()
                 }
             )
         }
