@@ -66,7 +66,8 @@ fun CarDetailScreen(
     seller: Seller?,
     price: PriceUi?,
     onBack: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onBuyClick: () -> Unit
 ) {
 
     var isFav by remember(car.id) { mutableStateOf(car.isFavorite) }
@@ -74,7 +75,7 @@ fun CarDetailScreen(
     Scaffold(
         topBar = {
             MocarTopBar(
-                title = car.plateNo,
+                title = { Text(car.plateNo, style = MaterialTheme.typography.titleMedium) },
                 onBack = onBack,
                 onMore = { /* TODO: 메뉴 */ }
             )
@@ -82,7 +83,7 @@ fun CarDetailScreen(
         bottomBar = {
             BottomActionBar(
                 priceRange = formatKrwPretty(car.priceKRW),
-                onBuy = { /* TODO: 구매 플로우 */ }
+                onBuy = { onBuyClick() }
             )
         }
     ) { inner ->

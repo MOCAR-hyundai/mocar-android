@@ -1,7 +1,6 @@
 package com.autoever.mocar.viewmodel
 
 import android.app.Application
-import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -10,19 +9,16 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import com.autoever.mocar.data.listings.ListingDto
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlin.text.contains
-
 data class SearchFilterState(
-    val priceRange: ClosedFloatingPointRange<Float> = 0f..10000f,
-    val yearRange: ClosedFloatingPointRange<Float> = 2006f..2025f,
+    val priceRange: ClosedFloatingPointRange<Float> = 0f..100000f,
+    val yearRange: ClosedFloatingPointRange<Float> = 1990f..2025f,
     val mileageRange: ClosedFloatingPointRange<Float> = 0f..300000f,
     val selectedTypes: List<String> = emptyList(),
     val selectedFuels: List<String> = emptyList(),
@@ -37,6 +33,7 @@ data class ListingUiState(
 
 // 검색기록
 data class SearchRecordItem(
+    val docId: String,
     val brand: String?,
     val model: String?,
     val subModels: List<String>,
@@ -65,7 +62,6 @@ data class FilterParams(
 )
 
 class SearchManufacturerViewModel : ViewModel() {
-
     var isTransitionLoading by mutableStateOf(false)
     var selectedBrand by mutableStateOf<String?>(null)
     var selectedModel by mutableStateOf<String?>(null)
@@ -86,17 +82,20 @@ class SearchManufacturerViewModel : ViewModel() {
 }
 
 class SearchFilterViewModel(application: Application) : AndroidViewModel(application) {
-    // 필터링
+    // 필터링 상태
     private val _filterState = MutableStateFlow(SearchFilterState())
     val filterState: StateFlow<SearchFilterState> = _filterState
 
-    // 필터링 검색 결과 기록
-    private val prefs = application.getSharedPreferences("filter_prefs", Context.MODE_PRIVATE)
-    private val _filterHistory = MutableStateFlow<List<SearchRecordItem>>(loadHistoryFromPrefs())
+    // 필터 기록
+    private val _filterHistory = MutableStateFlow<List<SearchRecordItem>>(emptyList())
     val filterHistory: StateFlow<List<SearchRecordItem>> = _filterHistory
 
+
+    // 필터 후 상세 화면용
     var filterParams by mutableStateOf<FilterParams?>(null)
         private set
+
+    private val db = Firebase.firestore
 
     fun setFilterParamsFromCurrentState(
         brand: String?,
@@ -160,61 +159,163 @@ class SearchFilterViewModel(application: Application) : AndroidViewModel(applica
         _filterState.value = SearchFilterState()
     }
 
-    // 최근 필터링 검색 기록
-    fun saveSearchRecord(item: SearchRecordItem) {
-        val updated = (listOf(item) + _filterHistory.value).distinct().take(10)
-        _filterHistory.value = updated
-        saveHistoryToPrefs(updated)
+    // 파이어베이스에 필터 데이터 저장 (최근 검색기록)
+    fun saveSearchHistory(
+        userId: String,
+        brand: String?,
+        model: String?,
+        subModels: List<String>,
+        filterState: SearchFilterState
+    ) {
+        // 필터 데이터를 Map으로 구성 (timestamp는 아래에서 제외)
+        val filterData = mapOf(
+            "userId" to userId,
+            "brand" to brand,
+            "model" to model,
+            "subModels" to subModels.sorted(),
+            "minPrice" to filterState.priceRange.start.toInt(),
+            "maxPrice" to filterState.priceRange.endInclusive.toInt(),
+            "minYear" to filterState.yearRange.start.toInt(),
+            "maxYear" to filterState.yearRange.endInclusive.toInt(),
+            "minMileage" to filterState.mileageRange.start.toInt(),
+            "maxMileage" to filterState.mileageRange.endInclusive.toInt(),
+            "carTypes" to filterState.selectedTypes.sorted(),
+            "fuels" to filterState.selectedFuels.sorted(),
+            "regions" to filterState.selectedRegions.sorted(),
+            "timestamp" to FieldValue.serverTimestamp()
+        )
+
+        // 🔸 중복 체크용 signature 생성 (timestamp, userId 제외)
+        val currentSignature = filterData
+            .filterKeys { it != "userId" && it != "timestamp" }
+            .mapValues { entry ->
+                when (val value = entry.value) {
+                    is List<*> -> value.map { it.toString() }.sorted()
+                    is Number -> value.toString()
+                    else -> value?.toString() ?: ""
+                }
+            }
+            .toSortedMap()
+            .toString()
+
+        db.collection("recent_filter")
+            .whereEqualTo("userId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                val isDuplicate = result.any { doc ->
+                    val docSignature = doc.data
+                        .filterKeys { it != "userId" && it != "timestamp" }
+                        .mapValues { entry ->
+                            when (val value = entry.value) {
+                                is List<*> -> value.map { it.toString() }.sorted()
+                                is Number -> value.toString()
+                                else -> value?.toString() ?: ""
+                            }
+                        }
+                        .toSortedMap()
+                        .toString()
+
+                    docSignature == currentSignature
+                }
+
+                if (!isDuplicate) {
+                    db.collection("recent_filter")
+                        .add(filterData)
+                        .addOnSuccessListener {
+                            Log.d("Firestore", "필터 저장 성공")
+                        }
+                        .addOnFailureListener {
+                            Log.e("Firestore", "필터 저장 실패", it)
+                        }
+                } else {
+                    Log.d("Firestore", "⚠중복된 필터 - 저장 생략")
+                }
+            }
+            .addOnFailureListener {
+                Log.e("Firestore", "중복 필터 조회 실패", it)
+            }
     }
 
-    fun serializeRecord(item: SearchRecordItem): String {
-        return buildString {
-            append("brand=${item.brand ?: ""};")
-            append("model=${item.model ?: ""};")
-            append("subModels=${item.subModels.joinToString(",")};")
-            append("price=${item.priceRange.start},${item.priceRange.endInclusive};")
-            append("year=${item.yearRange.start},${item.yearRange.endInclusive};")
-            append("mileage=${item.mileageRange.start},${item.mileageRange.endInclusive};")
-            append("types=${item.selectedTypes.joinToString(",")};")
-            append("fuels=${item.selectedFuels.joinToString(",")};")
-            append("regions=${item.selectedRegions.joinToString(",")}")
+
+    // 파이어베이스에 저장된 데이터 불러오기 (최근 검색기록)
+    fun loadSearchHistory(userId: String) {
+
+        db.collection("recent_filter")
+            .whereEqualTo("userId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                val sortedDocs = result.sortedByDescending {
+                    it.getTimestamp("timestamp")?.toDate()
+                }
+                val items = sortedDocs.mapNotNull { doc ->
+                    try {
+                        SearchRecordItem(
+                            docId = doc.id,
+                            brand = doc.getString("brand"),
+                            model = doc.getString("model"),
+                            subModels = doc.get("subModels") as? List<String> ?: emptyList(),
+                            priceRange = doc.getLong("minPrice")!!.toFloat()..doc.getLong("maxPrice")!!.toFloat(),
+                            yearRange = doc.getLong("minYear")!!.toFloat()..doc.getLong("maxYear")!!.toFloat(),
+                            mileageRange = doc.getLong("minMileage")!!.toFloat()..doc.getLong("maxMileage")!!.toFloat(),
+                            selectedTypes = doc.get("carTypes") as? List<String> ?: emptyList(),
+                            selectedFuels = doc.get("fuels") as? List<String> ?: emptyList(),
+                            selectedRegions = doc.get("regions") as? List<String> ?: emptyList()
+                        )
+                    } catch (e: Exception) {
+                        Log.e("Firestore", "파싱 실패: ${doc.id}", e)
+                        null
+                    }
+                }
+
+                _filterHistory.value = items
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "필터 기록 불러오기 실패", e)
+            }
+    }
+
+    fun deleteEachHistory(item: SearchRecordItem) {
+
+        val docId = item.docId
+
+        if (docId.isNotBlank()) {
+            db.collection("recent_filter").document(docId)
+                .delete()
+                .addOnSuccessListener {
+                    Log.d("Firestore", "필터 기록 삭제 성공")
+
+                    // ViewModel 내 로컬 상태도 갱신
+                    val current = _filterHistory.value.toMutableList()
+                    current.remove(item)
+                    _filterHistory.value = current
+                }
+                .addOnFailureListener {
+                    Log.e("Firestore", "필터 기록 삭제 실패", it)
+                }
         }
     }
 
-    fun deserializeRecord(raw: String): SearchRecordItem? {
-        try {
-            val map = raw.split(";")
-                .map { it.split("=", limit = 2) }
-                .associate { it[0] to it.getOrElse(1) { "" } }
+    fun clearAllHistory(userId: String) {
 
-            return SearchRecordItem(
-                brand = map["brand"]?.ifBlank { null },
-                model = map["model"]?.ifBlank { null },
-                subModels = map["subModels"]?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
-                priceRange = map["price"]?.split(",")?.let { it[0].toFloat()..it[1].toFloat() } ?: (0f..10000f),
-                yearRange = map["year"]?.split(",")?.let { it[0].toFloat()..it[1].toFloat() } ?: (2006f..2025f),
-                mileageRange = map["mileage"]?.split(",")?.let { it[0].toFloat()..it[1].toFloat() } ?: (0f..300000f),
-                selectedTypes = map["types"]?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
-                selectedFuels = map["fuels"]?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
-                selectedRegions = map["regions"]?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
-            )
-        } catch (e: Exception) {
-            return null
-        }
+        db.collection("recent_filter")
+            .whereEqualTo("userId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                // 파이어스토어에서 모든 해당 문서 삭제
+                result.forEach { doc ->
+                    db.collection("recent_filter").document(doc.id).delete()
+                }
+
+                // 로컬 상태도 초기화
+                _filterHistory.value = emptyList()
+
+                Log.d("Firestore", "최근 필터 검색 기록 전체 삭제 완료")
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "최근 필터 기록 전체 삭제 실패", e)
+            }
     }
 
-
-    fun saveHistoryToPrefs(list: List<SearchRecordItem>) {
-        val rawSet = list.map { serializeRecord(it) }.toSet()
-        prefs.edit().putStringSet("filter_history_set", rawSet).apply()
-
-        _filterHistory.value = list
-    }
-
-    private fun loadHistoryFromPrefs(): List<SearchRecordItem> {
-        val rawSet = prefs.getStringSet("filter_history_set", emptySet()) ?: return emptyList()
-        return rawSet.mapNotNull { deserializeRecord(it) }
-    }
 
     fun restoreFrom(item: SearchRecordItem) {
         _filterState.value = SearchFilterState(
@@ -228,7 +329,6 @@ class SearchFilterViewModel(application: Application) : AndroidViewModel(applica
     }
 }
 
-
 class ListingViewModel : ViewModel() {
     private var hasFetched = false
     private val db = Firebase.firestore
@@ -237,7 +337,6 @@ class ListingViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(ListingUiState())
     val uiState: StateFlow<ListingUiState> = _uiState
-
 
     init {
         fetchListings()
@@ -250,7 +349,6 @@ class ListingViewModel : ViewModel() {
         _uiState.update { it.copy(isLoading = true) }
         db.collection("listings").get()
             .addOnSuccessListener { result ->
-                 Log.d("Firestore", "📦 Fetched documents: ${result.size()}")
 
                 val parsed = result.mapNotNull { doc ->
                     val brand = doc.getString("brand")
@@ -259,7 +357,6 @@ class ListingViewModel : ViewModel() {
                     val carType = doc.getString("carType")
                     val region = doc.getString("region")
                     val imageList = doc.get("images") as? List<String> ?: emptyList()
-
                     val title = doc.getString("title") ?: ""
                     val year = doc.getLong("year")?.toInt() ?: 0
 
@@ -289,7 +386,6 @@ class ListingViewModel : ViewModel() {
                 Log.e("Firestore", "Failed to fetch listings", e)
             }
     }
-
 }
 
 class SearchFilterViewModelFactory(

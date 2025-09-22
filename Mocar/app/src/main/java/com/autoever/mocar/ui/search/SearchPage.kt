@@ -17,7 +17,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -42,7 +41,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
@@ -53,14 +55,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autoever.mocar.R
 import com.autoever.mocar.data.listings.ListingDto
-import com.autoever.mocar.viewmodel.FilterParams
 import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchBarViewModel
 import com.autoever.mocar.viewmodel.SearchFilterState
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
-import com.autoever.mocar.viewmodel.SearchRecordItem
 import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
 import com.autoever.mocar.viewmodel.SearchUiState
+import com.google.firebase.auth.FirebaseAuth
 import kotlin.collections.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,6 +90,25 @@ fun SearchPage(
 
     val state by searchFilterViewModel.filterState.collectAsState()
 
+    var showSheet by remember { mutableStateOf(false) }
+    val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+
+    LaunchedEffect(userId) {
+        if (userId.isNotBlank()) {
+            searchBarViewModel.loadRecentKeywords(userId)
+        }
+    }
+
+    // 바텀시트 열기
+    if (showSheet) {
+        SearchHistoryBottomSheet(
+            userId = userId,
+            searchFilterViewModel = searchFilterViewModel,
+            searchManufacturerViewModel = searchManufacturerViewModel,
+            onDismiss = { showSheet = false }
+        )
+    }
+
     // 필터 개수 계산
     val totalFilteredCount by remember(
         listings,
@@ -112,7 +132,7 @@ fun SearchPage(
         bottomBar = {
             if (!isSearchActive) {
                 BottomButtons(
-                    navController = navController,
+                    userId = userId,
                     searchFilterViewModel = searchFilterViewModel,
                     searchManufacturerViewModel = searchManufacturerViewModel,
                     totalFilteredCount = totalFilteredCount,
@@ -162,13 +182,13 @@ fun SearchPage(
                     onBack = { searchBarViewModel.deactivateSearch() },
                     onKeywordClick = {
                         searchBarViewModel.updateQuery(it)
-                        searchBarViewModel.submitSearch()
-                                     },
+                        searchBarViewModel.submitSearch(userId)
+                    },
                     onRemoveKeyword = { searchBarViewModel.removeKeyword(it) },
-                    onClearAll = { searchBarViewModel.clearAllKeywords() },
-                    onSearchSubmit = { searchBarViewModel.submitSearch() },
+                    onClearAll = { searchBarViewModel.clearAllKeywords(userId) },
+                    onSearchSubmit = { searchBarViewModel.submitSearch(userId) },
                     onCarClick = {
-                        searchBarViewModel.selectCar(it)
+                        searchBarViewModel.selectCar(it, userId)
                         searchBarViewModel.deactivateSearch()
                         navController.popBackStack()
                     }
@@ -180,18 +200,22 @@ fun SearchPage(
                         .fillMaxWidth()
                         .height(40.dp)
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 15.dp)
-                        .clickable {
-                            navController.navigate("history")
-                        },
+                        .padding(bottom = 15.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    Text("최근 검색기록 ")
-                    Icon(
-                        imageVector = Icons.Default.ArrowForwardIos,
-                        contentDescription = "최근검색기록",
-                        tint = Color.Gray
-                    )
+                    Row(
+                        modifier = Modifier
+                            .clickable {
+                                showSheet = true
+                            },
+                    ) {
+                        Text("최근 검색 기록 ")
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = "최근검색기록",
+                            tint = Color.Gray
+                        )
+                    }
                 }
                 Row(
                     modifier = Modifier
@@ -372,7 +396,7 @@ fun LeftMenu(selected: String,
 // 초기화 및 선택 버튼
 @Composable
 fun BottomButtons(
-    navController : NavController,
+    userId: String,
     searchFilterViewModel: SearchFilterViewModel,
     searchManufacturerViewModel: SearchManufacturerViewModel,
     totalFilteredCount: Int,
@@ -410,20 +434,8 @@ fun BottomButtons(
 
         Button(
             onClick = {
-                val record = SearchRecordItem(
-                    brand = searchManufacturerViewModel.selectedBrand,
-                    model = searchManufacturerViewModel.selectedModel,
-                    subModels = searchManufacturerViewModel.selectedSubModels.toList(),
-                    priceRange = state.priceRange,
-                    yearRange = state.yearRange,
-                    mileageRange = state.mileageRange,
-                    selectedTypes = state.selectedTypes,
-                    selectedFuels = state.selectedFuels,
-                    selectedRegions = state.selectedRegions
-                )
-                searchFilterViewModel.saveSearchRecord(record)
-
-                searchFilterViewModel.setFilterParamsFromCurrentState(
+                searchFilterViewModel.saveSearchHistory(
+                    userId = userId, // FirebaseAuth.getInstance().currentUser?.uid ?: ""
                     brand = searchManufacturerViewModel.selectedBrand,
                     model = searchManufacturerViewModel.selectedModel,
                     subModels = searchManufacturerViewModel.selectedSubModels,
@@ -443,7 +455,7 @@ fun BottomButtons(
                 .height(60.dp)
         ) {
             Text(
-                text = "${totalFilteredCount} 대",
+                text = "${totalFilteredCount} 대 보기",
                 fontSize = 16.sp,
             )
         }
@@ -473,14 +485,18 @@ fun SearchFullScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("최근 검색 키워드", fontWeight = FontWeight.SemiBold)
-            Text(
-                text = "전체 삭제",
-                color = Color.Red,
-                fontSize = 14.sp,
-                modifier = Modifier
-                    .clickable { onClearAll() }
-                    .padding(end = 4.dp)
-            )
+            Box(
+                modifier = Modifier.padding(end = 10.dp)
+            ) {
+                Text(
+                    text = "전체 삭제",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .clickable { onClearAll() }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -613,10 +629,7 @@ fun getFilteredListings(
                 regionMatches
     }
 
-    println("✅ 필터링 결과: ${filtered.size}대")
-//    filtered.forEachIndexed { idx, car ->
-//        println("  ${idx + 1}. ${car.brand} ${car.model} | ${car.carType} | ${car.fuel} | ${car.region}")
-//    }
+    println("필터링 결과: ${filtered.size}대")
 
     return filtered
 }
@@ -626,8 +639,14 @@ fun getFilteredListings(
 fun SearchHistoryScreen(
     searchFilterViewModel: SearchFilterViewModel,
     searchManufacturerViewModel: SearchManufacturerViewModel,
+    userId: String,
     onBack: () -> Unit
 ) {
+
+    LaunchedEffect(Unit) {
+        searchFilterViewModel.loadSearchHistory(userId)
+    }
+
     val history by searchFilterViewModel.filterHistory.collectAsState()
     val default = SearchFilterState()
 
@@ -635,90 +654,124 @@ fun SearchHistoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8F8F8))
-            .padding(top = 32.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = {
-                    onBack()
-                },
-                modifier = Modifier.size(38.dp)) {
-                Icon(painterResource(id = R.drawable.ic_back), contentDescription = "뒤로",
-                    modifier = Modifier.size(18.dp), tint = Color.Black)
+                onClick = onBack,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_back),
+                    contentDescription = "뒤로",
+                    modifier = Modifier.size(18.dp),
+                    tint = Color.Black
+                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
             Text("최근 검색 기록", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Box(
+                modifier = Modifier.padding(end = 20.dp)
+            ) {
+                Text(
+                    text = "전체 삭제",
+                    color = Color.Red,
+                    fontSize = 16.sp,
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .clickable { searchFilterViewModel.clearAllHistory(userId)
+                        }
+                )
+            }
         }
 
-        LazyColumn {
-            itemsIndexed(history) { index, item ->
-                val displayFilters = mutableListOf<String>()
+        if (history.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("최근 검색 기록이 없습니다.", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 25.dp)
+            ) {
+                itemsIndexed(history) { index, item ->
+                    val displayFilters = mutableListOf<String>()
 
-                if (item.subModels.isNotEmpty())
-                    displayFilters.add("세부모델: ${item.subModels.joinToString(", ")}")
-                if (item.priceRange != default.priceRange)
-                    displayFilters.add("가격: ${item.priceRange.start.toInt()}~${item.priceRange.endInclusive.toInt()}만원")
-                if (item.yearRange != default.yearRange)
-                    displayFilters.add("연식: ${item.yearRange.start.toInt()}~${item.yearRange.endInclusive.toInt()}년")
-                if (item.mileageRange != default.mileageRange)
-                    displayFilters.add("주행: ${item.mileageRange.start.toInt()}~${item.mileageRange.endInclusive.toInt()}km")
-                if (item.selectedTypes.isNotEmpty())
-                    displayFilters.add("차종: ${item.selectedTypes.joinToString(", ")}")
-                if (item.selectedFuels.isNotEmpty())
-                    displayFilters.add("연료: ${item.selectedFuels.joinToString(", ")}")
-                if (item.selectedRegions.isNotEmpty())
-                    displayFilters.add("지역: ${item.selectedRegions.joinToString(", ")}")
+                    if (item.subModels.isNotEmpty())
+                        displayFilters.add("세부모델: ${item.subModels.joinToString(", ")}")
+                    if (item.priceRange != default.priceRange)
+                        displayFilters.add("가격: ${item.priceRange.start.toInt()}~${item.priceRange.endInclusive.toInt()}만원")
+                    if (item.yearRange != default.yearRange)
+                        displayFilters.add("연식: ${item.yearRange.start.toInt()}~${item.yearRange.endInclusive.toInt()}년")
+                    if (item.mileageRange != default.mileageRange)
+                        displayFilters.add("주행: ${item.mileageRange.start.toInt()}~${item.mileageRange.endInclusive.toInt()}km")
+                    if (item.selectedTypes.isNotEmpty())
+                        displayFilters.add("차종: ${item.selectedTypes.joinToString(", ")}")
+                    if (item.selectedFuels.isNotEmpty())
+                        displayFilters.add("연료: ${item.selectedFuels.joinToString(", ")}")
+                    if (item.selectedRegions.isNotEmpty())
+                        displayFilters.add("지역: ${item.selectedRegions.joinToString(", ")}")
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .background(Color(0xFFF4F4F4), RoundedCornerShape(12.dp))
-                        .clickable {
-                            searchFilterViewModel.restoreFrom(item)
-                            searchManufacturerViewModel.restoreFrom(item)
-                            onBack()
-                        }
-                ) {
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .background(Color(0xFFF4F4F4), RoundedCornerShape(12.dp))
+                            .clickable {
+                                searchFilterViewModel.restoreFrom(item)
+                                searchManufacturerViewModel.restoreFrom(item)
+                                onBack()
+                            }
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            // 상단: 제조사 / 모델 / 세부모델
-                            Text(
-                                buildString {
-                                    if (!item.brand.isNullOrBlank()) append("제조사: ${item.brand}")
-                                    if (!item.model.isNullOrBlank()) append(" / 모델: ${item.model}")
-                                },
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp
-                            )
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    buildString {
+                                        if (!item.brand.isNullOrBlank()) append("제조사: ${item.brand}") else append("제조사: 전체")
+                                        if (!item.model.isNullOrBlank()) append(" / 모델: ${item.model}")
+                                    },
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 16.sp
+                                )
 
-                            // 하단: 필터 내용들 (있는 것만)
-                            if (displayFilters.isNotEmpty()) {
-                                Spacer(Modifier.height(4.dp))
-                                displayFilters.forEach {
-                                    Text(text = it, fontSize = 14.sp, color = Color.DarkGray)
+                                if (displayFilters.isNotEmpty()) {
+                                    Spacer(Modifier.height(4.dp))
+                                    displayFilters.forEach {
+                                        Text(text = it, fontSize = 14.sp, color = Color.DarkGray)
+                                    }
                                 }
                             }
                         }
-
                         IconButton(
                             onClick = {
                                 val mutable = history.toMutableList()
                                 mutable.removeAt(index)
-                                searchFilterViewModel.saveHistoryToPrefs(mutable)
-                            }
+                                searchFilterViewModel.deleteEachHistory(item)
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -728,7 +781,38 @@ fun SearchHistoryScreen(
                         }
                     }
                 }
+
+                item {
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchHistoryBottomSheet(
+    userId: String,
+    searchFilterViewModel: SearchFilterViewModel,
+    searchManufacturerViewModel: SearchManufacturerViewModel,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        containerColor = Color(0xFFF8F8F8),
+        modifier = Modifier.fillMaxHeight() // 최대한 채우기
+    ) {
+        Box(modifier = Modifier.fillMaxHeight()) {
+            SearchHistoryScreen(
+                userId = userId,
+                searchFilterViewModel = searchFilterViewModel,
+                searchManufacturerViewModel = searchManufacturerViewModel,
+                onBack = onDismiss
+            )
         }
     }
 }

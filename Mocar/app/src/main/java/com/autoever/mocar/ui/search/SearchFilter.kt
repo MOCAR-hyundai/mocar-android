@@ -283,7 +283,7 @@ fun Price(viewModel: SearchFilterViewModel = viewModel()) {
     RangeInputSlider(
         title = "가격",
         unit = "만원",
-        valueRange = 0f..10000f,
+        valueRange = 0f..100000f,
         currentRange = state.priceRange,
         onValueChange = { viewModel.updatePrice(it) }
     )
@@ -295,7 +295,7 @@ fun Year(viewModel: SearchFilterViewModel = viewModel()) {
     RangeInputSlider(
         title = "연식",
         unit = "년",
-        valueRange = 2006f..2025f,
+        valueRange = 1990f..2025f,
         currentRange = state.yearRange,
         onValueChange = { viewModel.updateYear(it) }
     )
@@ -307,7 +307,7 @@ fun Mileage(viewModel: SearchFilterViewModel = viewModel()) {
     RangeInputSlider(
         title = "주행거리",
         unit = "km",
-        valueRange = 0f..200000f,
+        valueRange = 0f..300000f,
         currentRange = state.mileageRange,
         onValueChange = { viewModel.updateMileage(it) }
     )

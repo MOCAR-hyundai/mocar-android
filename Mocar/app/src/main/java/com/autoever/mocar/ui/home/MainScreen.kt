@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,13 +38,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.autoever.mocar.domain.model.Car
-import com.autoever.mocar.ui.chat.ChatScreen
-//import com.autoever.mocar.ui.home.HomeSampleData.cars
+import com.autoever.mocar.ui.chat.ChatsScreen
 import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
 import com.autoever.mocar.ui.sell.SellCarScreen
-import com.google.android.play.integrity.internal.f
 
 @Composable
 fun MainScreen(rootNavController: NavHostController) {
@@ -96,7 +96,7 @@ fun MainScreen(rootNavController: NavHostController) {
             composable(BottomNavItem.Search.route)  {
                 rootNavController.navigate(ROUTE_SEARCH)
             }
-            composable(BottomNavItem.Chat.route)    { ChatScreen() }
+            composable(BottomNavItem.Chat.route)    { ChatsScreen(navController = rootNavController) }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 navController = rootNavController,
                 onWishListClick = {},
@@ -121,6 +121,7 @@ private fun MocarBottomBarPill(
 
     Surface(
         color = Color.White,
+        modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()),
         tonalElevation = 8.dp,
         shadowElevation = 8.dp,
         shape = barShape

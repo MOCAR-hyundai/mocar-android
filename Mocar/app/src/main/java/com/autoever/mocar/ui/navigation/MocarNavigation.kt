@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.autoever.mocar.ui.auth.LoginPage
 import com.autoever.mocar.ui.auth.SignUpPage
+import com.autoever.mocar.ui.chat.ChatRoomScreen
 import com.autoever.mocar.ui.home.MainScreen
 import com.autoever.mocar.ui.search.ModelSelect
 import com.autoever.mocar.ui.search.SearchHistoryScreen
@@ -23,6 +24,7 @@ import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModelFactory
 import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 // ----- Routes -----
 const val ROUTE_AUTH = "auth"
@@ -71,7 +73,10 @@ fun MocarNavigation() {
             val carId = backStackEntry.arguments?.getString("carId") ?: ""
             CarDetailRoute(
                 carId = carId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                navToChat = { chatId ->
+                    navController.navigate("chat_room/$chatId")
+                }
             )
         }
         composable("signup") {
@@ -121,7 +126,9 @@ fun MocarNavigation() {
         }
 
         composable("history") {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
             SearchHistoryScreen(
+                userId = userId,
                 searchFilterViewModel = searchFilterViewModel,
                 searchManufacturerViewModel = manufacturerViewModel,
                 onBack = { navController.popBackStack() }
@@ -137,31 +144,17 @@ fun MocarNavigation() {
             )
         }
 
-        composable("result") {
-            SearchResultPage(
-                navController = navController,
-                searchManufacturerViewModel = searchManufacturerViewModel,
-                searchFilterViewModel = searchFilterViewModel,
-                listingViewModel = listingViewModel,
-                onBack = { navController.popBackStack() }
-            )
+        composable("chats") {
+            com.autoever.mocar.ui.chat.ChatsScreen(navController = navController)
         }
 
-
-//        composable(
-//            route = "search_result/{brandName}/{modelName}",
-//            arguments = listOf(
-//                navArgument("brandName") { type = NavType.StringType },
-//                navArgument("modelName") { type = NavType.StringType }
-//            )
-//        ) { backStackEntry ->
-//            val brand = backStackEntry.arguments?.getString("brandName") ?: return@composable
-//            val model = backStackEntry.arguments?.getString("modelName") ?: return@composable
-//
-//            SearchResultScreen(
-//                manufacturer = brand,
-//                model = model
-//            )
-//        }
+        composable(
+            "chat_room/{chatId}",
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            ChatRoomScreen(chatId = chatId,
+                onBack = { navController.popBackStack() } )
+        }
     }
 }
