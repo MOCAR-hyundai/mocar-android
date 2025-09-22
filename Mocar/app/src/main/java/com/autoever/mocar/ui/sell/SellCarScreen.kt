@@ -59,6 +59,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -118,13 +119,24 @@ fun SellCarScreen() {
 
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
-    val focus = LocalFocusManager.current
+//    val focus = LocalFocusManager.current
+    var form by remember { mutableStateOf(SellForm()) }
     var step by remember { mutableStateOf(SellStep.Plate) }
-    val form = remember { SellForm() }
+
+    fun resetAll() {
+        form = SellForm()
+        vm.clearStates()
+        step = SellStep.Plate
+    }
 
     // 등록 완료되면 Done 으로 이동
     LaunchedEffect(submit.done) {
         if (submit.done) step = SellStep.Done
+    }
+
+    // 화면이 제거될 때도 초기화 (탭 라우트가 unmount 되는 경우)
+    DisposableEffect(Unit) {
+        onDispose { resetAll() }
     }
 
     // 에러가 생기면 스낵바
@@ -190,7 +202,7 @@ fun SellCarScreen() {
                                 )
                             }
                         }
-                        SellStep.Done -> step = SellStep.Plate
+                        SellStep.Done -> { resetAll() }
                         else -> step = SellStep.entries[SellStep.entries.indexOf(step) + 1]
                     }
                 },
@@ -669,7 +681,7 @@ private fun ReviewStep(form: SellForm, saleBlocked: Boolean) {
             )
         )
 
-        // ✅ 사용자가 추가로 올린 사진들 (섬네일 가로 스크롤)
+        // 사용자가 추가로 올린 사진들 (섬네일 가로 스크롤)
         if (form.photos.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -805,23 +817,27 @@ private fun InfoCard(rows: List<Pair<String, String>>) {
         tonalElevation = 0.dp,
         border = BorderStroke(1.dp, Color(0xFFE5E7EB))
     ) {
-        Column(Modifier.padding(16.dp)) {
-            rows.forEachIndexed { idx, (label, value) ->
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            rows.forEach { (label, value) ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(label, color = Color(0xFF6B7280))
-                    Spacer(modifier = Modifier.width(12.dp))
+                    // 레이블은 고정 너비
+                    Text(
+                        label,
+                        modifier = Modifier.width(72.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF6B7280)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    // 값은 가변, 추가정보는 여러 줄 허용
                     Text(
                         value,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.End,
                         modifier = Modifier.weight(1f),
-                        maxLines = 3
+                        style = MaterialTheme.typography.bodyMedium, // 너무 크단 의견 반영
+                        softWrap = true,
+                        maxLines = if (label == "추가정보") Int.MAX_VALUE else 1
                     )
                 }
             }

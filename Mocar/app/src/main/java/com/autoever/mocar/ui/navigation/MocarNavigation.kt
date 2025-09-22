@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.autoever.mocar.ui.auth.LoginPage
 import com.autoever.mocar.ui.auth.SignUpPage
+import com.autoever.mocar.ui.chat.ChatRoomScreen
 import com.autoever.mocar.ui.home.MainScreen
 import com.autoever.mocar.ui.search.ModelSelect
 import com.autoever.mocar.ui.search.SearchHistoryScreen
@@ -70,7 +71,10 @@ fun MocarNavigation() {
             val carId = backStackEntry.arguments?.getString("carId") ?: ""
             CarDetailRoute(
                 carId = carId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                navToChat = { chatId ->
+                    navController.navigate("chat_room/$chatId")
+                }
             )
         }
         composable("signup") {
@@ -134,6 +138,18 @@ fun MocarNavigation() {
                     navController.navigate("carDetail/$carId")
                 }
             )
+        }
+
+        composable("chats") {
+            com.autoever.mocar.ui.chat.ChatsScreen(navController = navController)
+        }
+        composable(
+            "chat_room/{chatId}",
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            ChatRoomScreen(chatId = chatId,
+                onBack = { navController.popBackStack() } )
         }
 
 

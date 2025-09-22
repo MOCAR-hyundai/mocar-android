@@ -38,13 +38,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.autoever.mocar.domain.model.Car
-import com.autoever.mocar.ui.chat.ChatScreen
-//import com.autoever.mocar.ui.home.HomeSampleData.cars
+import com.autoever.mocar.ui.chat.ChatsScreen
 import com.autoever.mocar.ui.mypage.MyPageScreen
 import com.autoever.mocar.ui.navigation.BottomNavItem
 import com.autoever.mocar.ui.sell.SellCarScreen
-import com.google.android.play.integrity.internal.f
 
 @Composable
 fun MainScreen(rootNavController: NavHostController) {
@@ -99,7 +96,7 @@ fun MainScreen(rootNavController: NavHostController) {
             composable(BottomNavItem.Search.route)  {
                 rootNavController.navigate(ROUTE_SEARCH)
             }
-            composable(BottomNavItem.Chat.route)    { ChatScreen() }
+            composable(BottomNavItem.Chat.route)    { ChatsScreen(navController = rootNavController) }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 navController = rootNavController,
                 onWishListClick = {},

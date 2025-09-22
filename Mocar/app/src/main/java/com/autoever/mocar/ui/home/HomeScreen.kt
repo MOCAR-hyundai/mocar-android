@@ -156,14 +156,20 @@ fun HomeScreen(
             Spacer(Modifier.height(12.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(brands, key = { it.id }) { brand ->
-                    BrandChip(
-                        brand = brand,
-                        selected = selectedBrandId == brand.id,
-                        onClick = {
-                            selectedBrandId =
-                                if (selectedBrandId == brand.id) null else brand.id
-                        }
-                    )
+                    Box(
+                        modifier = Modifier.width(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BrandChip(
+                            brand = brand,
+                            selected = selectedBrandId == brand.id,
+                            onClick = {
+                                selectedBrandId =
+                                    if (selectedBrandId == brand.id) null else brand.id
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }

@@ -116,12 +116,36 @@ class CarDetailViewModel(
         val u = uid ?: return
         viewModelScope.launch { repo.toggleFavorite(u, listingId) }
     }
+    /**
+     * 구매문의 눌렀을 때 채팅방 열기
+     * 성공 시 chatId 반환
+     */
+    fun openChat(
+        sellerId: String,
+        onSuccess: (String) -> Unit,
+        onError: (Throwable) -> Unit = {}
+    ) {
+        val u = uid ?: return
+        viewModelScope.launch {
+            try {
+                val chatId = repo.openChatForListing(
+                    listingId = listingId,
+                    buyerId = u,
+                    sellerId = sellerId
+                )
+                onSuccess(chatId)
+            } catch (e: Throwable) {
+                onError(e)
+            }
+        }
+    }
 }
 
 @Composable
 fun CarDetailRoute(
     carId: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    navToChat: (String) -> Unit
 ) {
     // 간단한 factory
     val vm:CarDetailViewModel = viewModel(
@@ -147,7 +171,14 @@ fun CarDetailRoute(
             seller = seller,
             price = state.price,
             onBack = onBack,
-            onToggleFavorite = { vm.toggleFavorite() }
+            onToggleFavorite = { vm.toggleFavorite() },
+            onBuyClick = {
+                val sellerId = seller?.id ?: return@CarDetailScreen
+                vm.openChat(
+                    sellerId = sellerId,
+                    onSuccess = { chatId -> navToChat(chatId) }
+                )
+            }
         )
     }
 }

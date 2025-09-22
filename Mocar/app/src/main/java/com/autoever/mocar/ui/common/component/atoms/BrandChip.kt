@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,6 +64,25 @@ fun BrandChip(
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(brand.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // 괄호 앞에서 줄바꿈 되도록 처리
+        val displayName = brand.name
+            .replace(" (", "\n(")  // "쉐보레 (GM대우)" 같은 경우
+            .replace("(", "\n(")  // 그냥 "("만 있는 경우도 커버
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(36.dp),               // 텍스트 영역 높이 고정 (2줄 기준)
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = displayName,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,           // 두 줄일 때도 일정한 라인 높이
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }

@@ -1,14 +1,23 @@
 package com.autoever.mocar.repository
 
 import com.autoever.mocar.data.brands.BrandDto
+import com.autoever.mocar.data.chats.ChatRoomDto
+import com.autoever.mocar.data.chats.MessageDto
+import com.autoever.mocar.data.chats.toDomain
 import com.autoever.mocar.data.favorites.FavoriteDto
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.price.PriceIndexDto
+import com.autoever.mocar.domain.model.ChatRoom
+import com.autoever.mocar.domain.model.Message
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlin.math.max
+import kotlin.math.min
 
 class FirebaseMocarRepository(
     private val db: FirebaseFirestore
@@ -142,5 +151,94 @@ class FirebaseMocarRepository(
 
         ref.update(upd).await()
         return StartSaleResult.Updated(listingId)
+    }
+
+    private fun chatDoc(chatId: String) = db.collection("chats").document(chatId)
+
+    override fun myChatRooms(uid: String): Flow<List<ChatRoom>> = callbackFlow {
+        // buyerId == uid
+        val sub1 = db.collection("chats")
+            .whereEqualTo("buyerId", uid)
+            .orderBy("lastAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snap, e ->
+                if (e != null) { trySend(emptyList()); return@addSnapshotListener }
+                val rooms = snap?.documents?.mapNotNull { d ->
+                    d.toObject(ChatRoomDto::class.java)?.copy(chatId = d.id)?.toDomain(uid)
+                } ?: emptyList()
+                trySend(rooms)
+            }
+
+        // sellerId == uid
+        val sub2 = db.collection("chats")
+            .whereEqualTo("sellerId", uid)
+            .orderBy("lastAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snap, e ->
+                if (e != null) { trySend(emptyList()); return@addSnapshotListener }
+                val rooms = snap?.documents?.mapNotNull { d ->
+                    d.toObject(ChatRoomDto::class.java)?.copy(chatId = d.id)?.toDomain(uid)
+                } ?: emptyList()
+                trySend(rooms)
+            }
+
+        awaitClose { sub1.remove(); sub2.remove() }
+    }
+
+    override fun chatMessages(chatId: String, limit: Int): Flow<List<Message>> = callbackFlow {
+        val sub = chatDoc(chatId)
+            .collection("messages")
+            .orderBy("createdAt", Query.Direction.ASCENDING)
+            .limit(limit.toLong())
+            .addSnapshotListener { snap, e ->
+                if (e != null) { trySend(emptyList()); return@addSnapshotListener }
+                val msgs = snap?.documents?.mapNotNull { d ->
+                    d.toObject(MessageDto::class.java)?.copy(msgId = d.id)?.toDomain("")
+                } ?: emptyList()
+                trySend(msgs)
+            }
+        awaitClose { sub.remove() }
+    }
+
+    override suspend fun sendMessage(chatId: String, fromUid: String, text: String, imageUrl: String?) {
+        val now = Timestamp.now()
+        val msgRef = chatDoc(chatId).collection("messages").document()
+        db.runBatch { b ->
+            b.set(msgRef, MessageDto(
+                msgId = msgRef.id,
+                senderId = fromUid,
+                text = text,
+                imageUrl = imageUrl,
+                createdAt = now,
+                readBy = listOf(fromUid)
+            )
+            )
+            b.update(chatDoc(chatId), mapOf(
+                "lastMessage" to text,
+                "lastAt" to now
+            ))
+        }.await()
+    }
+
+    override suspend fun openChatForListing(listingId: String, buyerId: String, sellerId: String): String {
+        val a = minOf(buyerId, sellerId)
+        val b = maxOf(buyerId, sellerId)
+        val chatId = "chat_${a}_${b}_$listingId"
+        val ref = chatDoc(chatId)
+        val snap = ref.get().await()
+        if (!snap.exists()) {
+            val listing = listings.document(listingId).get().await()
+            val title = listing.getString("title") ?: ""
+            ref.set(
+                ChatRoomDto(
+                chatId = chatId,
+                listingId = listingId,
+                listingTitle = title,
+                buyerId = buyerId,
+                sellerId = sellerId,
+                lastMessage = "",
+                lastAt = Timestamp.now()
+            )
+            ).await()
+        }
+        return chatId
     }
 }

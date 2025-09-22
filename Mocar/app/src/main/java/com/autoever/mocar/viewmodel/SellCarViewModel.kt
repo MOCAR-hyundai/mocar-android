@@ -24,6 +24,7 @@ private fun nowKstText(): String {
     return fmt.format(Date())
 }
 
+
 /* ---- status 정의 ---- */
 object ListingStatus {
     const val ON_SALE  = "on_sale"
@@ -179,5 +180,9 @@ class SellCarViewModel(
                 )
             }
         }
+    }
+    fun clearStates() {
+        _lookup.value = ListingLookupState()
+        _submit.value = SellSubmitState()
     }
 }
