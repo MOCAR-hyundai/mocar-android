@@ -23,6 +23,7 @@ import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModelFactory
 import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 // ----- Routes -----
 const val ROUTE_AUTH = "auth"
@@ -124,7 +125,9 @@ fun MocarNavigation() {
         }
 
         composable("history") {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
             SearchHistoryScreen(
+                userId = userId,
                 searchFilterViewModel = searchFilterViewModel,
                 searchManufacturerViewModel = manufacturerViewModel,
                 onBack = { navController.popBackStack() }
@@ -143,6 +146,7 @@ fun MocarNavigation() {
         composable("chats") {
             com.autoever.mocar.ui.chat.ChatsScreen(navController = navController)
         }
+
         composable(
             "chat_room/{chatId}",
             arguments = listOf(navArgument("chatId") { type = NavType.StringType })
@@ -151,22 +155,5 @@ fun MocarNavigation() {
             ChatRoomScreen(chatId = chatId,
                 onBack = { navController.popBackStack() } )
         }
-
-
-//        composable(
-//            route = "search_result/{brandName}/{modelName}",
-//            arguments = listOf(
-//                navArgument("brandName") { type = NavType.StringType },
-//                navArgument("modelName") { type = NavType.StringType }
-//            )
-//        ) { backStackEntry ->
-//            val brand = backStackEntry.arguments?.getString("brandName") ?: return@composable
-//            val model = backStackEntry.arguments?.getString("modelName") ?: return@composable
-//
-//            SearchResultScreen(
-//                manufacturer = brand,
-//                model = model
-//            )
-//        }
     }
 }

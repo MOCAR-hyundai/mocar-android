@@ -19,8 +19,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,12 +37,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import android.app.DatePickerDialog
 import android.util.Patterns
 import android.widget.Toast
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.ui.platform.LocalContext
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.Locale
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,27 +76,29 @@ fun SignUpPage(navController: NavHostController) {
         )
     }
 
-
     Scaffold(
         containerColor = Color(0xFFF8F8F8),
         modifier = Modifier.fillMaxWidth()
             .padding(top = 20.dp),
         topBar = {
-            TopAppBar(
-                title = {
-                    Image(
-                        painter = painterResource(id = R.drawable.logo_mocar),
-                        contentDescription = "모카 로고",
-                        modifier = Modifier
-                            .width(140.dp)
-                            .height(60.dp)
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFFF8F8F8)
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(Modifier.padding(16.dp)) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo_mocar),
+                    contentDescription = "로고",
+                    modifier = Modifier
+                        .width(140.dp)
+                        .height(60.dp)
+                )
+                Text(
+                    text = "회원가입",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    textAlign = TextAlign.Start
+                )
+            }
         },
     ) { innerPadding ->
         Column(
@@ -105,20 +106,12 @@ fun SignUpPage(navController: NavHostController) {
                 .padding(innerPadding)
                 .fillMaxSize()
                 .padding(16.dp)
-                .background(Color(0xFFF8F8F8)),
+                .background(Color(0xFFF8F8F8))
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "회원가입",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                textAlign = TextAlign.Start
-            )
 
-            Spacer(modifier = Modifier.height(30.dp))
-
+            Spacer(modifier = Modifier.height(20.dp))
             Text(
                 text = "이메일",
                 modifier = Modifier
@@ -345,7 +338,7 @@ fun SignUpPage(navController: NavHostController) {
             Spacer(modifier = Modifier.weight(1f))
             Row(
                 modifier = Modifier
-                    .padding(bottom = 20.dp)
+                    .padding(top = 30.dp, bottom = 20.dp)
             ) {
                 Text(
                     text = "이미 계정이 있으신가요? ",
