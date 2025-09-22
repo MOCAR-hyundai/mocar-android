@@ -1,7 +1,10 @@
 package com.autoever.mocar.ui.common.component.atoms
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,7 +26,7 @@ import com.autoever.mocar.R
 
 @Composable
 fun MocarTopBar(
-    title: String,
+    title: @Composable () -> Unit,
     onBack: (() -> Unit)? = null,
     onMore: (() -> Unit)? = null
 ) {
@@ -51,12 +54,20 @@ fun MocarTopBar(
                     )
                 }
             } else {
-                // 없으면 Spacer 넣어도 됨
+                Spacer(Modifier.size(38.dp))
             }
 
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            // 가운데: 타이틀 슬롯 (가운데 정렬)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                title()
+            }
 
-            // More 버튼 (옵션)
+            // 오른쪽: 더보기 또는 자리 맞춤
             if (onMore != null) {
                 IconButton(
                     onClick = onMore,
@@ -70,8 +81,22 @@ fun MocarTopBar(
                     )
                 }
             } else {
-                // 없으면 Spacer 넣어도 됨
+                Spacer(Modifier.size(38.dp))
             }
         }
     }
+}
+
+/** 텍스트만 쓰고 싶을 때 편의용 래퍼 */
+@Composable
+fun MocarTopBarText(
+    titleText: String,
+    onBack: (() -> Unit)? = null,
+    onMore: (() -> Unit)? = null
+) {
+    MocarTopBar(
+        title = { Text(titleText, style = MaterialTheme.typography.titleMedium) },
+        onBack = onBack,
+        onMore = onMore
+    )
 }
