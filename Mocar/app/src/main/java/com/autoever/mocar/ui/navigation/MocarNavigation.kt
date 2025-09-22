@@ -4,6 +4,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -133,6 +134,16 @@ fun MocarNavigation() {
                 onCarClick = { carId ->
                     navController.navigate("carDetail/$carId")
                 }
+            )
+        }
+
+        composable("result") {
+            SearchResultPage(
+                navController = navController,
+                searchManufacturerViewModel = searchManufacturerViewModel,
+                searchFilterViewModel = searchFilterViewModel,
+                listingViewModel = listingViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 

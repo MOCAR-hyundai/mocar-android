@@ -112,6 +112,7 @@ fun SearchPage(
         bottomBar = {
             if (!isSearchActive) {
                 BottomButtons(
+                    navController = navController,
                     searchFilterViewModel = searchFilterViewModel,
                     searchManufacturerViewModel = searchManufacturerViewModel,
                     totalFilteredCount = totalFilteredCount,
@@ -371,6 +372,7 @@ fun LeftMenu(selected: String,
 // 초기화 및 선택 버튼
 @Composable
 fun BottomButtons(
+    navController : NavController,
     searchFilterViewModel: SearchFilterViewModel,
     searchManufacturerViewModel: SearchManufacturerViewModel,
     totalFilteredCount: Int,
@@ -427,6 +429,9 @@ fun BottomButtons(
                     subModels = searchManufacturerViewModel.selectedSubModels,
                     filterState = searchFilterViewModel.filterState.value
                 )
+
+                // 검색 결과 페이지로 이동
+                navController.navigate("result")
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,

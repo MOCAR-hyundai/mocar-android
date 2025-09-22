@@ -1,5 +1,3 @@
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,30 +20,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import java.text.NumberFormat
 import java.util.Locale
-//import kotlin.collections.EmptyList.size
 
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.unit.Dp
-import kotlinx.coroutines.launch
+import androidx.navigation.NavController
+import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.ui.search.getFilteredListings
+import com.autoever.mocar.viewmodel.ListingViewModel
+import com.autoever.mocar.viewmodel.SearchFilterViewModel
+import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
 
 // 데이터 모델
 data class Car(
@@ -74,13 +69,11 @@ data class CarFilter(
 // 메인 화면
 @Composable
 fun SearchResultScreen(
-    manufacturer: String,
-    model: String,
+    cars: List<Car>,
     filter: CarFilter = CarFilter(),
     onCarClick: (Car) -> Unit = {},
     onFavoriteClick: (Car) -> Unit = {}
 ) {
-    val carList by remember { mutableStateOf(sampleCarList.filter { it.trim.contains(model) }) }
     var appliedFilter by remember { mutableStateOf(filter) }
 
     fun applyFilter(list: List<Car>, filter: CarFilter): List<Car> {
@@ -96,7 +89,7 @@ fun SearchResultScreen(
         }
     }
 
-    val filteredCars = applyFilter(carList, appliedFilter)
+    val filteredCars = applyFilter(cars, appliedFilter)
 
     Column(
         modifier = Modifier
@@ -151,6 +144,90 @@ fun SearchResultScreen(
                         } else {
                             Spacer(modifier = Modifier.weight(1f))
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchResultPage(
+    navController: NavController,
+    searchManufacturerViewModel: SearchManufacturerViewModel,
+    searchFilterViewModel: SearchFilterViewModel,
+    listingViewModel: ListingViewModel,
+    onBack: () -> Unit
+) {
+    val listings: List<ListingDto> by listingViewModel.listings.collectAsState()
+    val state by searchFilterViewModel.filterState.collectAsState()
+
+    val filteredListings by remember(
+        listings,
+        state,
+        searchManufacturerViewModel.selectedBrand,
+        searchManufacturerViewModel.selectedModel,
+        searchManufacturerViewModel.selectedSubModels
+    ) {
+        derivedStateOf {
+            getFilteredListings(
+                allListings = listings,
+                filter = state,
+                brand = searchManufacturerViewModel.selectedBrand,
+                model = searchManufacturerViewModel.selectedModel,
+                subModels = searchManufacturerViewModel.selectedSubModels
+            )
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("검색 결과 (${filteredListings.size}대)") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ChevronRight, contentDescription = "뒤로가기")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (filteredListings.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("검색 결과가 없습니다.")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filteredListings.size) { index ->
+                    val listing = filteredListings[index]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { navController.navigate("carDetail/${listing.listingId}") }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("${listing.brand} ${listing.model} ${listing.trim}", fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text("${listing.year}년 · ${listing.mileage}km · ${listing.fuel}", color = Color.Gray)
+                        }
+                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                    }
+                    if (index < filteredListings.lastIndex) {
+                        Divider(color = Color(0xFFE0E0E0))
                     }
                 }
             }
@@ -624,141 +701,4 @@ fun CarCardVertical(
             )
         }
     }
-}
-
-// 샘플 데이터
-val sampleCarList = listOf(
-    Car(
-        id = "1",
-        imageUrl = "https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAyNTA1MDhfNzgg%2FMDAxNzQ2NjYzNDMzODEx.sYs7v_njUPhV8Zkf38dANvaiGhPMD-jM91WdhmXr0SMg.xMShH1vd1djcmFvE2TWB-dZT88nhGYVG7chpVYo06dAg.JPEG%2F2.jpg&type=l340_165",
-        trim = "아반떼 AD 1.6 GDi",
-        year = 2018,
-        mileage = 45000,
-        fuelType = "가솔린",
-        region = "서울",
-        price = 3600
-    ),
-    Car(
-        id = "1",
-        imageUrl = "https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAyNTA1MDhfNzgg%2FMDAxNzQ2NjYzNDMzODEx.sYs7v_njUPhV8Zkf38dANvaiGhPMD-jM91WdhmXr0SMg.xMShH1vd1djcmFvE2TWB-dZT88nhGYVG7chpVYo06dAg.JPEG%2F2.jpg&type=l340_165",
-        trim = "아반떼 AD 1.6 GDi",
-        year = 2018,
-        mileage = 45000,
-        fuelType = "가솔린",
-        region = "서울",
-        price = 1000
-    ),
-    Car(
-        id = "1",
-        imageUrl = "https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAyNTA1MDhfNzgg%2FMDAxNzQ2NjYzNDMzODEx.sYs7v_njUPhV8Zkf38dANvaiGhPMD-jM91WdhmXr0SMg.xMShH1vd1djcmFvE2TWB-dZT88nhGYVG7chpVYo06dAg.JPEG%2F2.jpg&type=l340_165",
-        trim = "아반떼 AD 1.6 GDi",
-        year = 2018,
-        mileage = 45000,
-        fuelType = "가솔린",
-        region = "서울",
-        price = 8660
-    ),
-    Car(
-        id = "2",
-        imageUrl = "https://cdn.pixabay.com/photo/2015/01/19/13/51/car-604019_1280.jpg",
-        trim = "쏘나타 DN8 2.0",
-        year = 2020,
-        mileage = 30000,
-        fuelType = "LPG",
-        region = "경기",
-        price = 1800
-    ),
-    Car(
-        id = "3",
-        imageUrl = "https://cdn.pixabay.com/photo/2016/11/29/09/32/auto-1868726_1280.jpg",
-        trim = "K5 DL3 1.6 터보",
-        year = 2021,
-        mileage = 15000,
-        fuelType = "가솔린",
-        region = "부산",
-        price = 2200
-    ),
-    Car(
-        id = "4",
-        imageUrl = "https://cdn.pixabay.com/photo/2013/07/12/15/55/car-150334_1280.png",
-        trim = "그랜저 IG 2.4",
-        year = 2019,
-        mileage = 38000,
-        fuelType = "가솔린",
-        region = "대구",
-        price = 2100
-    ),
-    Car(
-        id = "5",
-        imageUrl = "https://cdn.pixabay.com/photo/2014/07/31/23/10/car-407165_1280.jpg",
-        trim = "스포티지 QL 디젤",
-        year = 2017,
-        mileage = 60000,
-        fuelType = "디젤",
-        region = "인천",
-        price = 1700
-    ),
-    Car(
-        id = "6",
-        imageUrl = "https://cdn.pixabay.com/photo/2012/05/29/00/43/car-49278_1280.jpg",
-        trim = "아반떼 CN7 1.6",
-        year = 2022,
-        mileage = 8000,
-        fuelType = "가솔린",
-        region = "서울",
-        price = 2300
-    ),
-    Car(
-        id = "7",
-        imageUrl = "https://cdn.pixabay.com/photo/2015/01/19/13/51/car-604019_1280.jpg",
-        trim = "쏘렌토 MQ4 2.2 디젤",
-        year = 2021,
-        mileage = 20000,
-        fuelType = "디젤",
-        region = "경기",
-        price = 3200
-    ),
-    Car(
-        id = "8",
-        imageUrl = "https://cdn.pixabay.com/photo/2016/11/29/09/32/auto-1868726_1280.jpg",
-        trim = "K3 BD 1.6",
-        year = 2019,
-        mileage = 35000,
-        fuelType = "가솔린",
-        region = "부산",
-        price = 1400
-    ),
-    Car(
-        id = "9",
-        imageUrl = "https://cdn.pixabay.com/photo/2013/07/12/15/55/car-150334_1280.png",
-        trim = "그랜저 IG 3.0",
-        year = 2018,
-        mileage = 42000,
-        fuelType = "가솔린",
-        region = "대전",
-        price = 2500
-    ),
-    Car(
-        id = "10",
-        imageUrl = "https://cdn.pixabay.com/photo/2014/07/31/23/10/car-407165_1280.jpg",
-        trim = "스포티지 NQ5 하이브리드",
-        year = 2023,
-        mileage = 5000,
-        fuelType = "하이브리드",
-        region = "울산",
-        price = 3400
-    )
-)
-
-// 미리보기
-@Composable
-@Preview(showBackground = true)
-fun SearchResultScreenPreview() {
-    SearchResultScreen(
-        manufacturer = "현대",
-        model = "아반떼",
-        filter = CarFilter(),
-        onCarClick = {},
-        onFavoriteClick = {}
-    )
 }
