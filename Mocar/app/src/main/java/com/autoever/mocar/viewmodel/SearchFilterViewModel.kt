@@ -48,7 +48,21 @@ data class SearchRecordItem(
     val selectedRegions: List<String>
 )
 
-
+// 필터 > 상세정보
+data class FilterParams(
+    val brand: String?,
+    val model: String?,
+    val subModels: List<String>,
+    val minPrice: Float,
+    val maxPrice: Float,
+    val minYear: Float,
+    val maxYear: Float,
+    val minMileage: Float,
+    val maxMileage: Float,
+    val types: List<String>,
+    val fuels: List<String>,
+    val regions: List<String>
+)
 
 class SearchManufacturerViewModel : ViewModel() {
 
@@ -81,6 +95,31 @@ class SearchFilterViewModel(application: Application) : AndroidViewModel(applica
     private val _filterHistory = MutableStateFlow<List<SearchRecordItem>>(loadHistoryFromPrefs())
     val filterHistory: StateFlow<List<SearchRecordItem>> = _filterHistory
 
+    var filterParams by mutableStateOf<FilterParams?>(null)
+        private set
+
+    fun setFilterParamsFromCurrentState(
+        brand: String?,
+        model: String?,
+        subModels: List<String>,
+        filterState: SearchFilterState
+    ) {
+        filterParams = FilterParams(
+            brand = brand,
+            model = model,
+            subModels = subModels,
+            minPrice = filterState.priceRange.start,
+            maxPrice = filterState.priceRange.endInclusive,
+            minYear = filterState.yearRange.start,
+            maxYear = filterState.yearRange.endInclusive,
+            minMileage = filterState.mileageRange.start,
+            maxMileage = filterState.mileageRange.endInclusive,
+            types = filterState.selectedTypes,
+            fuels = filterState.selectedFuels,
+            regions = filterState.selectedRegions
+        )
+        println(filterParams)
+    }
 
     // 가격, 연식, 주행거리 업데이트
     fun updatePrice(range: ClosedFloatingPointRange<Float>) {
@@ -163,8 +202,6 @@ class SearchFilterViewModel(application: Application) : AndroidViewModel(applica
             return null
         }
     }
-
-
 
 
     fun saveHistoryToPrefs(list: List<SearchRecordItem>) {
