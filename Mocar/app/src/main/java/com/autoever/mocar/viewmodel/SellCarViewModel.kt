@@ -13,6 +13,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+
+private fun nowKstText(): String {
+    val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA)
+    fmt.timeZone = TimeZone.getTimeZone("Asia/Seoul")
+    return fmt.format(Date())
+}
 
 /* ---- status 정의 ---- */
 object ListingStatus {
@@ -132,8 +142,8 @@ class SellCarViewModel(
                 }
 
                 val updates = mutableMapOf<String, Any>(
-                    "status" to ListingStatus.ON_SALE,
-                    "updatedAt" to FieldValue.serverTimestamp()
+                    "status" to "on_sale",
+                    "updatedAt" to nowKstText()                   //문자열로 저장
                 )
                 mileageKm?.let { updates["mileage"] = it }
                 hopePrice?.let { updates["price"] = it }
