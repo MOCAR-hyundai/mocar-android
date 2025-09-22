@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 data class SearchFilterState(
-    val priceRange: ClosedFloatingPointRange<Float> = 0f..10000f,
-    val yearRange: ClosedFloatingPointRange<Float> = 2006f..2025f,
+    val priceRange: ClosedFloatingPointRange<Float> = 0f..100000f,
+    val yearRange: ClosedFloatingPointRange<Float> = 1990f..2025f,
     val mileageRange: ClosedFloatingPointRange<Float> = 0f..300000f,
     val selectedTypes: List<String> = emptyList(),
     val selectedFuels: List<String> = emptyList(),
