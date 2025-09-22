@@ -58,7 +58,7 @@ import com.autoever.mocar.R
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.ui.common.component.atoms.BrandChip
 import com.autoever.mocar.ui.common.component.atoms.BrandUi
-import com.autoever.mocar.ui.common.component.molecules.CarCard
+import com.autoever.mocar.ui.common.component.molecules.CarGrid
 import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.autoever.mocar.ui.common.component.molecules.FavoriteCarousel
 import com.autoever.mocar.viewmodel.HomeViewModel
@@ -184,23 +184,12 @@ fun HomeScreen(
         }
 
         // 차량 카드 2열 그리드
-        items(filtered.chunked(2)) { row ->
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                row.forEach { car ->
-                    Box(Modifier.weight(1f)) {
-                        CarCard(
-                            car = car.toUi(),
-                            onFavoriteToggle = { onToggleFavorite(car.id) },
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { navController.navigate(carDetailRoute(car.id)) }
-                        )
-                    }
-                }
-                if (row.size == 1) Spacer(Modifier.weight(1f)) // 홀수 보정
-            }
+        item {
+            CarGrid(
+                cars = filtered.map { it.toUi() },
+                onFavoriteToggle = { carId -> onToggleFavorite(carId) },
+                onCardClick = { carId -> navController.navigate(carDetailRoute(carId)) }
+            )
         }
     }
 }
