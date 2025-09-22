@@ -5,7 +5,6 @@ import com.autoever.mocar.data.favorites.FavoriteDto
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.price.PriceIndexDto
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -14,6 +13,8 @@ import kotlinx.coroutines.tasks.await
 class FirebaseMocarRepository(
     private val db: FirebaseFirestore
 ) : MocarRepository {
+
+    private val listings = db.collection("listings")
 
     override fun listingsOnSale(): Flow<List<ListingDto>> = callbackFlow {
         val reg = db.collection("listings")
@@ -102,4 +103,44 @@ class FirebaseMocarRepository(
             }
             awaitClose { reg.remove() }
         }
+
+    override suspend fun findListingByPlateAndOwner(
+        plateNo: String,
+        ownerName: String
+    ): ListingDto? {
+        val q = listings
+            .whereEqualTo("plateNo", plateNo)
+            .whereEqualTo("ownerName", ownerName)
+            .limit(1)
+            .get()
+            .await()
+        return q.documents.firstOrNull()?.toObject(ListingDto::class.java)
+    }
+
+    override suspend fun startOrUpdateSale(
+        listingId: String,
+        mileageKm: Int?,
+        priceKRW: Long?,
+        description: String?,
+        images: List<String>?
+    ): StartSaleResult {
+        val ref = listings.document(listingId)
+        val snap = ref.get().await()
+        if (!snap.exists()) return StartSaleResult.NotFound("listing not found")
+        val status = snap.getString("status") ?: ""
+        if (status == "on_sale") return StartSaleResult.AlreadyOnSale(listingId)
+
+        val upd = hashMapOf<String, Any>(
+            "status" to "on_sale",
+            "updatedAt" to com.google.firebase.Timestamp.now()
+        ).apply {
+            mileageKm?.let { put("mileage", it) }
+            priceKRW?.let { put("price", it) }
+            description?.let { put("description", it) }
+            images?.takeIf { it.isNotEmpty() }?.let { put("images", it) }
+        }
+
+        ref.update(upd).await()
+        return StartSaleResult.Updated(listingId)
+    }
 }

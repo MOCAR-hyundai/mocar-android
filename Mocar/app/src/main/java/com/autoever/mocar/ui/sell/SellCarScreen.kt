@@ -5,17 +5,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,16 +29,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
@@ -54,9 +54,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -76,8 +80,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.autoever.mocar.R
+import com.autoever.mocar.ui.common.util.sanitize
+import com.autoever.mocar.viewmodel.ListingStatus
+import com.autoever.mocar.viewmodel.SellCarViewModel
 import kotlin.math.min
 
 
@@ -97,20 +105,46 @@ private class SellForm {
     var mileageKm by mutableStateOf("")
     var hopePrice by mutableStateOf("")
     var extra     by mutableStateOf("")
+    var mainImageUrl by mutableStateOf("")
     val photos = mutableStateListOf<Uri>()
 }
 
 /* ---------- 메인 스크린 ---------- */
 @Composable
 fun SellCarScreen() {
+    val vm: SellCarViewModel = viewModel()
+    val lookup by vm.lookup.collectAsState()
+    val submit by vm.submit.collectAsState()
+
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+
     val focus = LocalFocusManager.current
     var step by remember { mutableStateOf(SellStep.Plate) }
     val form = remember { SellForm() }
 
+    // 등록 완료되면 Done 으로 이동
+    LaunchedEffect(submit.done) {
+        if (submit.done) step = SellStep.Done
+    }
+
+    // 에러가 생기면 스낵바
+    LaunchedEffect(lookup.error) { lookup.error?.let { snackbarHostState.showSnackbar(it) } }
+    LaunchedEffect(submit.error) { submit.error?.let { snackbarHostState.showSnackbar(it) } }
+
+    // 판매 차단 여부 계산
+    val saleBlocked: Boolean = remember(lookup.raw?.status) {
+        val s = lookup.raw?.status
+        s == ListingStatus.ON_SALE || s == ListingStatus.RESERVED
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.White,
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Bottom),
         topBar = {
+            val currentIndex = SellStep.entries.indexOf(step)
+            val progressValue = if (step == SellStep.Done) 1f
+            else (currentIndex.toFloat() / totalSteps).coerceIn(0f, 1f)
             SellTopBar(
                 title = when (step) {
                     SellStep.Plate -> "차량 번호 입력"
@@ -123,10 +157,7 @@ fun SellCarScreen() {
                     SellStep.Review -> "입력 내용 검토"
                     SellStep.Done -> "완료"
                 },
-                progress = when (step) {
-                    SellStep.Done -> 1f
-                    else -> (SellStep.entries.indexOf(step) + 1).toFloat() / totalSteps
-                }.coerceIn(0f, 1f)
+                progress = progressValue
             )
         },
         bottomBar = {
@@ -144,18 +175,35 @@ fun SellCarScreen() {
                     }
                 },
                 onNext = {
-                    focus.clearFocus()
-                    step = when (step) {
-                        SellStep.Review -> SellStep.Done
-                        SellStep.Done -> SellStep.Plate
-                        else -> SellStep.entries[SellStep.entries.indexOf(step) + 1]
+                    when (step) {
+                        SellStep.Owner -> {               // 소유자명 입력 후 조회
+                            vm.findListing(form.plate, form.owner)
+                            step = SellStep.CarInfo
+                        }
+                        SellStep.Review -> {
+                            if (!submit.loading) {
+                                vm.submitSale(
+                                    mileageKm = form.mileageKm.filter { it.isDigit() }.toLongOrNull(),
+                                    hopePrice = form.hopePrice.filter { it.isDigit() }.toLongOrNull(),
+                                    description = form.extra,
+                                    images = form.photos.map { it.toString() }
+                                )
+                            }
+                        }
+                        SellStep.Done -> step = SellStep.Plate
+                        else -> step = SellStep.entries[SellStep.entries.indexOf(step) + 1]
                     }
                 },
+
+// 버튼 활성화 조건 (기존과 동일, 필요시 Owner 단계에서 로딩 동안 false로도 확장 가능)
                 nextEnabled = when (step) {
                     SellStep.Plate -> form.plate.isNotBlank()
-                    SellStep.Owner -> form.owner.isNotBlank()
-                    SellStep.Odometer -> form.mileageKm.isNotBlank()
-                    SellStep.Price -> form.hopePrice.isNotBlank()
+                    SellStep.Owner -> form.owner.isNotBlank() && !lookup.loading
+                    SellStep.CarInfo -> {
+                        val blocked = lookup.raw?.status in setOf(ListingStatus.ON_SALE, ListingStatus.RESERVED)
+                        !blocked
+                    }
+                    SellStep.Review -> !submit.loading
                     else -> true
                 }
             )
@@ -177,12 +225,46 @@ fun SellCarScreen() {
                 when (s) {
                     SellStep.Plate    -> PlateStep(form)
                     SellStep.Owner    -> OwnerStep(form)
-                    SellStep.CarInfo  -> CarInfoStep(form)
+                    SellStep.CarInfo -> {
+                        // 조회 결과를 form에 반영
+                        LaunchedEffect(lookup.car?.id) {
+                            lookup.car?.let { car ->
+                                form.modelName = car.title.ifBlank {
+                                    listOf(car.brandName, car.title).filter { it.isNotBlank() }.joinToString(" ")
+                                }
+                                form.yearDesc = car.yearDesc
+                                form.mainImageUrl = car.imageUrl.orEmpty()   //대표 이미지 1장만
+                            }
+                        }
+
+                        // 판매/예약이면 배너를 먼저 노출
+                        val saleBlocked = remember(lookup.raw?.status) {
+                            lookup.raw?.status in setOf(ListingStatus.ON_SALE, ListingStatus.RESERVED)
+                        }
+
+                        Column(Modifier.fillMaxSize()) {
+                            if (saleBlocked) {
+                                SaleBlockedBanner(
+                                    status = lookup.raw?.status
+                                )
+                                Spacer(Modifier.height(12.dp))
+                            }
+                            // 원래의 내용
+                            CarInfoStep(form)
+
+                            // 조회 상태 메시지(선택)
+                            when {
+                                lookup.loading -> Text("검색 중…", modifier = Modifier.padding(20.dp))
+                                lookup.error != null && lookup.car == null ->
+                                    Text("오류: ${lookup.error}", color = Color.Red, modifier = Modifier.padding(20.dp))
+                            }
+                        }
+                    }
                     SellStep.Odometer -> OdometerStep(form)
                     SellStep.Price    -> PriceStep(form)
                     SellStep.Extra    -> ExtraStep(form)
                     SellStep.Photos   -> PhotosStep(form)
-                    SellStep.Review   -> ReviewStep(form)
+                    SellStep.Review   -> ReviewStep(form, saleBlocked)
                     SellStep.Done     -> DoneStep()
                 }
             }
@@ -318,19 +400,34 @@ private fun CarInfoStep(form: SellForm) {
         Text("차량 정보",
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+        )
         Spacer(Modifier.height(16.dp))
 
-        Image(
-            painter = painterResource(id = R.drawable.sample_car_2),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFFF4F4F6)),
-            contentScale = ContentScale.Fit
-        )
+        val hasImage = form.mainImageUrl.isNotBlank()
+        if (hasImage) {
+            AsyncImage(
+                model = form.mainImageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFFF4F4F6)),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(id = R.drawable.sample_car_2),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFFF4F4F6)),
+                contentScale = ContentScale.Fit
+            )
+        }
         Spacer(Modifier.height(12.dp))
         Text(form.modelName, color = Color(0xFF6B7280))
 
@@ -338,12 +435,13 @@ private fun CarInfoStep(form: SellForm) {
         InfoCard(
             rows = listOf(
                 "차량 번호" to (form.plate.ifBlank { "—" }),
-                "모델명" to form.modelName,
-                "연식" to form.yearDesc
+                "모델명"   to form.modelName,
+                "연식"     to form.yearDesc
             )
         )
     }
 }
+
 
 /* ---------- Step 4: 주행거리 ---------- */
 @Composable
@@ -514,56 +612,53 @@ private fun PhotosStep(form: SellForm) {
 
 /* ---------- Step 7: 검토 ---------- */
 @Composable
-private fun ReviewStep(form: SellForm) {
+private fun ReviewStep(form: SellForm, saleBlocked: Boolean) {
+    val scroll = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scroll)
             .padding(20.dp)
     ) {
-        // 상단 대표 이미지
-        if (form.photos.isNotEmpty()) {
+        // 기본정보 이미지(대표 1장) 표시
+        val hasMain = form.mainImageUrl.isNotBlank()
+        if (hasMain) {
             AsyncImage(
-                model = form.photos.first(),
+                model = form.mainImageUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
+                    .height(180.dp)
                     .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
-            Spacer(Modifier.height(12.dp))
         } else {
             Image(
                 painter = painterResource(id = R.drawable.sample_car_2),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
+                    .height(180.dp)
                     .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Fit
             )
-            Spacer(Modifier.height(12.dp))
         }
 
+        Spacer(Modifier.height(12.dp))
         Text(
             form.modelName,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             "${form.yearDesc} · ${form.mileageKm.ifBlank { "—" }} km",
-            color = Color(0xFF6B7280)
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = form.hopePrice.ifBlank { "—" },
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF2A5BFF)
-            )
+            color = Color(0xFF6B7280),
+            style = MaterialTheme.typography.bodyMedium
         )
 
         Spacer(Modifier.height(16.dp))
+
         InfoCard(
             rows = listOf(
                 "차량 번호" to (form.plate.ifBlank { "—" }),
@@ -573,8 +668,40 @@ private fun ReviewStep(form: SellForm) {
                 "추가정보" to (form.extra.ifBlank { "—" })
             )
         )
+
+        // ✅ 사용자가 추가로 올린 사진들 (섬네일 가로 스크롤)
+        if (form.photos.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(form.photos) { uri ->
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(width = 120.dp, height = 90.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
+
+        // 상태 차단 문구(옵션)
+        if (saleBlocked) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "현재 상태 때문에 등록할 수 없습니다.",
+                color = Color(0xFFD92D20),
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        // 하단 버튼이 가려지지 않도록 여백
+        Spacer(Modifier.height(24.dp))
     }
 }
+
 
 /* ---------- Step 8: 완료 ---------- */
 @Composable
@@ -683,17 +810,18 @@ private fun InfoCard(rows: List<Pair<String, String>>) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 10.dp),
+                        .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(label, color = Color(0xFF6B7280))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         value,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.End,
                         modifier = Modifier.weight(1f),
-                        maxLines = 2
+                        maxLines = 3
                     )
                 }
             }
@@ -723,3 +851,49 @@ private fun CleanProgressBar(
         )
     }
 }
+
+@Composable
+private fun SaleBlockedBanner(status: String?) {
+    val (title, message) = when (status) {
+        ListingStatus.RESERVED -> "등록 불가" to "예약 중인 매물입니다."
+        ListingStatus.ON_SALE  -> "등록 불가" to "이미 판매중인 매물입니다."
+        else -> return
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFFFF7ED),                   // 연한 오렌지 배경
+        border = BorderStroke(1.dp, Color(0xFFFBD6A8)) // 라이트 오렌지 보더
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // 알림 아이콘 (X 제거)
+            Icon(
+                imageVector = Icons.Outlined.Info, // 없으면 Icons.Outlined.Info 사용
+                contentDescription = null,
+                tint = Color(0xFFB45309) // 진한 오렌지
+            )
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF9A3412) // 텍스트 오렌지
+                    )
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF9A3412))
+                )
+            }
+        }
+    }
+}
+

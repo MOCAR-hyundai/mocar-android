@@ -18,4 +18,19 @@ interface MocarRepository {
     fun brands(): Flow<List<BrandDto>>
 
     fun priceIndexById(id: String): Flow<PriceIndexDto?>
+
+    suspend fun findListingByPlateAndOwner(plateNo: String, ownerName: String): ListingDto?
+    suspend fun startOrUpdateSale(
+        listingId: String,
+        mileageKm: Int?,       // null이면 유지
+        priceKRW: Long?,
+        description: String?,
+        images: List<String>?, // 스토리지 업로드 후 URL 리스트
+    ): StartSaleResult
+}
+
+sealed class StartSaleResult {
+    data class Updated(val id: String): StartSaleResult()
+    data class AlreadyOnSale(val id: String): StartSaleResult()
+    data class NotFound(val reason: String): StartSaleResult()
 }
