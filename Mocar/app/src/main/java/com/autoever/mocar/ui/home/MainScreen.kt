@@ -73,6 +73,10 @@ fun MainScreen(rootNavController: NavHostController) {
                         }
                         return@MocarBottomBarPill
                     }
+                    if (route == BottomNavItem.Search.route) {
+                        rootNavController.navigate(ROUTE_SEARCH) // ✅ SearchPage로 이동
+                        return@MocarBottomBarPill
+                    }
                     navController.navigate(route) {
                         popUpTo(navController.graph.startDestinationId) { saveState = true }
                         launchSingleTop = true
@@ -94,7 +98,7 @@ fun MainScreen(rootNavController: NavHostController) {
             }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }
             composable(BottomNavItem.Search.route)  {
-                rootNavController.navigate(ROUTE_SEARCH)
+//                rootNavController.navigate(ROUTE_SEARCH)
             }
             composable(BottomNavItem.Chat.route)    { ChatsScreen(navController = rootNavController) }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(

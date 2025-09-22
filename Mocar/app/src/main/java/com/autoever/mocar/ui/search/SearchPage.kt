@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,8 +48,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.ViewModel
@@ -87,6 +91,7 @@ fun SearchPage(
     )
     val searchState by searchBarViewModel.uiState.collectAsState()
     val isSearchActive by searchBarViewModel.isSearchActive.collectAsState()
+    val focusManager = LocalFocusManager.current
 
     val state by searchFilterViewModel.filterState.collectAsState()
 
@@ -157,9 +162,15 @@ fun SearchPage(
             ) {
                 IconButton(
                     onClick = {
+                        if (isSearchActive) {
+                            focusManager.clearFocus()
+                            searchBarViewModel.updateQuery("")
+                            searchBarViewModel.deactivateSearch()
+                        } else {
                         searchManufacturerViewModel.clearAll()
                         searchFilterViewModel.clearAll()
                         onBack()
+                    }
                               },
                     modifier = Modifier.size(38.dp)) {
                     Icon(painterResource(id = R.drawable.ic_back), contentDescription = "뒤로",
@@ -176,17 +187,24 @@ fun SearchPage(
             }
 
             if (isSearchActive) {
+                val focusManager = LocalFocusManager.current
                 SearchFullScreen(
                     searchState = searchState,
                     onQueryChange = { searchBarViewModel.updateQuery(it) },
-                    onBack = { searchBarViewModel.deactivateSearch() },
+                    onBack = {
+                        focusManager.clearFocus()
+                        searchBarViewModel.deactivateSearch() },
                     onKeywordClick = {
                         searchBarViewModel.updateQuery(it)
                         searchBarViewModel.submitSearch(userId)
                     },
                     onRemoveKeyword = { searchBarViewModel.removeKeyword(it) },
                     onClearAll = { searchBarViewModel.clearAllKeywords(userId) },
-                    onSearchSubmit = { searchBarViewModel.submitSearch(userId) },
+                    onSearchSubmit = {
+                        searchBarViewModel.submitSearch(userId)
+                        focusManager.clearFocus()
+                        searchBarViewModel.deactivateSearch()
+                                     },
                     onCarClick = {
                         searchBarViewModel.selectCar(it, userId)
                         searchBarViewModel.deactivateSearch()
@@ -265,53 +283,64 @@ fun SearchBar(
     onValueChange: (String) -> Unit,
     onClick: () -> Unit = {}
 ) {
-    var hasClicked by remember { mutableStateOf(false) }
 
-    Box(
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    var hasFocusedOnce by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isFocused) {
+        if (isFocused && !hasFocusedOnce) {
+            hasFocusedOnce = true
+            onClick()
+        }else if (!isFocused && hasFocusedOnce) {
+            hasFocusedOnce = false
+        }
+    }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = {
+            onValueChange(it)
+            onClick() },
+
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clickable {
-                if (!hasClicked) {
-                    hasClicked = true
-                    onClick()
-                }
-            },
-        contentAlignment = Alignment.CenterStart
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {
-                if (!hasClicked) {
-                    hasClicked = true
-                    onClick()
-                }
-                onValueChange(it)
-            },
-            modifier = Modifier
-                .fillMaxSize(),
-            singleLine = true,
-            placeholder = { Text("제조사, 모델을 검색해보세요") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                    tint = Color(0xFF6B7280)
-                )
-            },
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF3058EF),
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = Color(0xFF111827),
-                unfocusedTextColor = Color(0xFF111827),
-                focusedPlaceholderColor = Color(0xFF9CA3AF),
-                unfocusedPlaceholderColor = Color(0xFF9CA3AF),
-                cursorColor = Color(0xFF2A5BFF)
+            ,
+        singleLine = true,
+        placeholder = { Text("제조사, 모델을 검색해보세요") },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = Color(0xFF6B7280)
             )
+        },
+        trailingIcon = {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = { onValueChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "지우기",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+        interactionSource = interactionSource,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color(0xFF3058EF),
+            unfocusedBorderColor = Color.Gray,
+            focusedTextColor = Color(0xFF111827),
+            unfocusedTextColor = Color(0xFF111827),
+            focusedPlaceholderColor = Color(0xFF9CA3AF),
+            unfocusedPlaceholderColor = Color(0xFF9CA3AF),
+            cursorColor = Color(0xFF2A5BFF)
         )
-    }
+    )
 }
 
 // 좌측 메뉴 박스
@@ -539,21 +568,35 @@ fun SearchFullScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (searchState.searchResults.isNotEmpty()) {
+        if (searchState.query.isNotBlank() && searchState.searchResults.isNotEmpty()) {
+            val groupedResults = searchState.searchResults
+                .groupBy { it.title }
+                .mapNotNull { (title, items) ->
+                    if (items.isNotEmpty()) {
+                        Triple(title, items.first().year, items)
+                    } else null
+                }
             LazyColumn {
-                itemsIndexed(searchState.searchResults) { index, listing:ListingDto ->
-                    Column(
-                        Modifier
-                        .padding(vertical = 12.dp)
-                        .clickable {
-                            onCarClick(listing)
-                            println("clicked listing - ${listing}")
-                        }) {
-                        Text("${listing.brand} ${listing.model}", fontWeight = FontWeight.Bold)
-                        Text("연식: ${listing.year} | 가격: ${listing.price/10000}만원 | 주행: ${listing.mileage}km", color = Color.Gray)
+                itemsIndexed(groupedResults) { index, (title, year, items) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onCarClick(items.first()) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(title,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .padding(end = 20.dp))
+                            Text("$year", fontSize = 13.sp, color = Color.Gray)
+                        }
+                        Text("${items.size}대", color = Color.Gray)
                     }
-                    // 마지막 아이템이 아니라면 Divider 추가
-                    if (index < searchState.searchResults.lastIndex) {
+
+                    if (index < groupedResults.lastIndex) {
                         HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 0.5.dp)
                     }
                 }
