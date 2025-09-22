@@ -178,7 +178,7 @@ fun MyPageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onWishListClick() }
+                    .clickable { navController.navigate("like_list") }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

@@ -1,26 +1,27 @@
+import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.autoever.mocar.ui.detail.CarDetailScreen
-//import com.autoever.mocar.ui.home.HomeSampleData
 import com.autoever.mocar.ui.auth.LoginPage
 import com.autoever.mocar.ui.auth.SignUpPage
-//import com.autoever.mocar.ui.home.HomeSampleData.cars
 import com.autoever.mocar.ui.home.MainScreen
-import com.autoever.mocar.ui.search.Manufacturer
 import com.autoever.mocar.ui.search.ModelSelect
+import com.autoever.mocar.ui.search.SearchHistoryScreen
 import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.search.SubModelSelect
+import com.autoever.mocar.ui.mypage.LikeListScreen
 import com.autoever.mocar.viewmodel.CarDetailRoute
 import com.autoever.mocar.viewmodel.ListingViewModel
-import com.autoever.mocar.viewmodel.SearchSharedViewModel
+import com.autoever.mocar.viewmodel.SearchFilterViewModel
+import com.autoever.mocar.viewmodel.SearchFilterViewModelFactory
+import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
 
 // ----- Routes -----
 const val ROUTE_AUTH = "auth"
@@ -32,15 +33,13 @@ fun carDetailRoute(carId: String) = "$ROUTE_CAR_DETAIL/$carId"
 @Composable
 fun MocarNavigation() {
     val navController = rememberNavController()
-    val searchSharedViewModel: SearchSharedViewModel = viewModel()
+    val searchManufacturerViewModel: SearchManufacturerViewModel = viewModel()
+    val context = LocalContext.current.applicationContext as Application
+    val searchFilterViewModel: SearchFilterViewModel = viewModel(
+        factory = SearchFilterViewModelFactory(context.applicationContext as Application)
+    )
+    val manufacturerViewModel: SearchManufacturerViewModel = viewModel()
     val listingViewModel: ListingViewModel = viewModel()
-//    var cars by remember { mutableStateOf(HomeSampleData.cars) }
-//
-//    val toggleFavorite: (String) -> Unit = { id ->
-//        cars = cars.map { c ->
-//            if (c.id == id) c.copy(isFavorite = !c.isFavorite) else c
-//        }
-//    }
 
     NavHost(
         navController = navController,
@@ -55,7 +54,8 @@ fun MocarNavigation() {
         composable(ROUTE_SEARCH) {
             SearchPage(
                 navController = navController,
-                searchSharedViewModel = searchSharedViewModel,
+                searchManufacturerViewModel = searchManufacturerViewModel,
+                searchFilterViewModel = searchFilterViewModel,
                 listingViewModel = listingViewModel,
                 onBack = {
                     navController.navigate(ROUTE_MAIN)
@@ -93,7 +93,7 @@ fun MocarNavigation() {
                 brandName = brand,
                 allListings = listings,
                 listingViewModel = listingViewModel,
-                searchSharedViewModel = searchSharedViewModel,
+                searchManufacturerViewModel = searchManufacturerViewModel,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -114,10 +114,28 @@ fun MocarNavigation() {
                 brandName = brand,
                 modelName = model,
                 allListings = listings,
-                searchSharedViewModel = searchSharedViewModel,
+                searchManufacturerViewModel = searchManufacturerViewModel,
                 onBack = { navController.popBackStack() }
             )
         }
+
+        composable("history") {
+            SearchHistoryScreen(
+                searchFilterViewModel = searchFilterViewModel,
+                searchManufacturerViewModel = manufacturerViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("like_list") {
+            LikeListScreen(
+                navController = navController,
+                onCarClick = { carId ->
+                    navController.navigate("carDetail/$carId")
+                }
+            )
+        }
+
 
 //        composable(
 //            route = "search_result/{brandName}/{modelName}",

@@ -1,7 +1,5 @@
 package com.autoever.mocar.ui.search
 
-import ROUTE_SEARCH
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,139 +24,140 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.autoever.mocar.R
+import coil.compose.AsyncImage
+import com.autoever.mocar.data.brands.BrandDto
 import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.viewmodel.BrandViewModel
 import com.autoever.mocar.viewmodel.ListingViewModel
-import com.autoever.mocar.viewmodel.SearchSharedViewModel
+import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
 
 data class carDatas(
     val name: String,
     val count: Int,
-    val imageRes: String,
+    val imageRes: String?,
     val isKorean: Boolean
 )
 
-fun String.isKorean(): Boolean {
-    return this.any { it in '가'..'힣' }
-}
-
-fun List<ListingDto>.toBrandMap(): List<carDatas> {
+fun List<ListingDto>.toBrandMap(brandDtos: List<BrandDto>): List<carDatas> {
     return this.groupBy { it.brand }
-        .map { (brand, items) ->
-            carDatas(
-                name = brand,
-                count = items.size,
-                imageRes = items.firstOrNull()?.images?.firstOrNull().orEmpty(),
-                isKorean = brand.isKorean()
-            )
+        .mapNotNull { (brandName, items) ->
+            val matchedBrand = brandDtos.find { it.name == brandName }
+            if (matchedBrand != null) {
+                carDatas(
+                    name = brandName,
+                    count = items.size,
+                    imageRes = matchedBrand.logoUrl,
+                    isKorean = matchedBrand.countryType == "domestic"
+                )
+            } else null
         }
 }
+
 
 @Composable
 fun Manufacturer(navController: NavController,
                  searchQuery: String,
-                 searchSharedViewModel: SearchSharedViewModel,
-                 listingViewModel: ListingViewModel){
-//                 viewModel: ListingViewModel = viewModel())
-
+                 searchManufacturerViewModel: SearchManufacturerViewModel,
+                 listingViewModel: ListingViewModel,
+                 brandViewModel: BrandViewModel = viewModel()
+){
     val uiState by listingViewModel.uiState.collectAsState()
     val listings by listingViewModel.listings.collectAsState()
-    val allBrands = listings.toBrandMap()
+    val brandDtos by brandViewModel.brands.collectAsState()
 
-    val selectedBrand = searchSharedViewModel.selectedBrand
-    val selectedModel = searchSharedViewModel.selectedModel
-    val selectedSubModels = searchSharedViewModel.selectedSubModels
+    val allBrands = listings.toBrandMap(brandDtos)
+    val domesticBrands = allBrands.filter { it.isKorean }
+    val foreignBrands = allBrands.filter { !it.isKorean }
 
-
-    println("✅ Brand: ${searchSharedViewModel.selectedBrand}")
-    println("✅ Model: ${searchSharedViewModel.selectedModel}")
-    println("✅ SubModels: ${searchSharedViewModel.selectedSubModels}")
+    val selectedBrand = searchManufacturerViewModel.selectedBrand
+    val selectedModel = searchManufacturerViewModel.selectedModel
+    val selectedSubModels = searchManufacturerViewModel.selectedSubModels
 
     if (uiState.isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("로딩 중…") // or CircularProgressIndicator()
+            Text("로딩 중…")
         }
     } else {
-    if (selectedBrand != null) {
-        // 제조사 + 모델 선택 완료 상태 → 배경 변경 + 요약 박스 표시
-        SelectedFilterSummary(
-            brand = selectedBrand,
-            model = selectedModel.orEmpty(),
-            subModels = selectedSubModels,
-            onBrandClear = {
-                searchSharedViewModel.selectedBrand = null
-                searchSharedViewModel.selectedModel = null
-                searchSharedViewModel.selectedSubModels.clear()
-            },
-            onModelClear = {
-                searchSharedViewModel.selectedModel = null
-                searchSharedViewModel.selectedSubModels.clear()
-            },
-            onSubModelClear = {subModelToRemove ->
-                searchSharedViewModel.selectedSubModels.remove(subModelToRemove)
-            },
-            onModelClick = {
-                navController.navigate("model_select/${selectedBrand}")
-            },
+        if (selectedBrand != null) {
+            // 제조사 + 모델 선택 완료 상태 → 배경 변경 + 요약 박스 표시
+            SelectedFilterSummary(
+                brand = selectedBrand,
+                model = selectedModel.orEmpty(),
+                subModels = selectedSubModels,
+                onBrandClear = {
+                    searchManufacturerViewModel.selectedBrand = null
+                    searchManufacturerViewModel.selectedModel = null
+                    searchManufacturerViewModel.selectedSubModels.clear()
+                },
+                onModelClear = {
+                    searchManufacturerViewModel.selectedModel = null
+                    searchManufacturerViewModel.selectedSubModels.clear()
+                },
+                onSubModelClear = {subModelToRemove ->
+                    searchManufacturerViewModel.selectedSubModels.remove(subModelToRemove)
+                },
+                onModelClick = {
+                    navController.navigate("model_select/${selectedBrand}")
+                },
 
-            onSubModelClick = {
-                navController.navigate("sub_model_select/${selectedBrand}/${selectedModel}")
-            }
-        )
-    } else {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp)
-        ) {
-            item { CategoryLabel("국산차") }
-            items(allBrands.size) { index ->
-                val (name, count, imageUrl) = allBrands[index]
-                ManufacturerCard(name, count, imageUrl) {
-                    searchSharedViewModel.isTransitionLoading = true
-                    navController.navigate("model_select/$name")
-                    searchSharedViewModel.selectedBrand = name
+                onSubModelClick = {
+                    navController.navigate("sub_model_select/${selectedBrand}/${selectedModel}")
                 }
-                if (index < allBrands.size - 1) {
-                    HorizontalDivider(
-                        color = Color(0xFFE0E0E0),
-                        thickness = 0.7.dp,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                item { CategoryLabel("국산차") }
+                items(domesticBrands.size) { index ->
+                    val (name, count, imageUrl) = domesticBrands[index]
+                    ManufacturerCard(name, count, imageUrl) {
+                        searchManufacturerViewModel.isTransitionLoading = true
+                        navController.navigate("model_select/$name")
+                        searchManufacturerViewModel.selectedBrand = name
+                    }
+                    if (index < domesticBrands.size - 1) {
+                        HorizontalDivider(
+                            color = Color(0xFFE0E0E0),
+                            thickness = 0.7.dp,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
                 }
-            }
 
-            item { CategoryLabel("수입차") }
-//            items(foreignBrands.size) { index ->
-//                val (name, count, imageUrl) = foreignBrands[index]
-//                ManufacturerCard(name, count, imageUrl) {
-//                    selectedBrand = name
-//                    showModelSheet = true
-//                }
-//                if (index < foreignBrands.size - 1) {
-//                    HorizontalDivider(
-//                        color = Color(0xFFE0E0E0),
-//                        thickness = 0.7.dp,
-//                        modifier = Modifier.padding(horizontal = 8.dp)
-//                    )
-//                }
-//            }
+                item { CategoryLabel("수입차") }
+                items(foreignBrands.size) { index ->
+                    val (name, count, imageUrl) = foreignBrands[index]
+                    ManufacturerCard(name, count, imageUrl) {
+                        searchManufacturerViewModel.isTransitionLoading = true
+                        navController.navigate("model_select/$name")
+                        searchManufacturerViewModel.selectedBrand = name
+                    }
+                    if (index < foreignBrands.size - 1) {
+                        HorizontalDivider(
+                            color = Color(0xFFE0E0E0),
+                            thickness = 0.7.dp,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
+                }
+            }
         }
-    }
     }
 }
 
+// 카테고리 레이블 박스
 @Composable
 fun CategoryLabel(text: String) {
     Box(
         modifier = Modifier
-            .padding(vertical = 8.dp)
+            .padding(10.dp)
             .wrapContentSize()
             .background(
                 color = Color.White,
@@ -185,7 +184,7 @@ fun CategoryLabel(text: String) {
 fun ManufacturerCard(
     name: String,
     count: Int,
-    imageRes: String,
+    imageRes: String?,
     onClick: () -> Unit
 ) {
     Card(
@@ -205,41 +204,12 @@ fun ManufacturerCard(
         ) {
             // 로고 이미지 + 이름
             Row(
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-//                AsyncImage(
-//                    model = imageRes,
-//                    contentDescription = "$name 로고",
-//                    modifier = Modifier
-//                        .height(30.dp)
-//                        .width(70.dp)
-//                        .padding(end = 4.dp),
-//                    contentScale = ContentScale.Fit
-//                )
-//                if (imageRes.isNotBlank()) {
-//                    AsyncImage(
-//                        model = imageRes,
-//                        contentDescription = "$name 로고",
-//                        modifier = Modifier
-//                            .height(30.dp)
-//                            .width(70.dp)
-//                            .padding(end = 4.dp),
-//                        contentScale = ContentScale.Fit
-//                    )
-//                } else {
-//                    Image(
-//                        painter = painterResource(id = R.drawable.brand_hyundai),
-//                        contentDescription = "기본 로고",
-//                        modifier = Modifier
-//                            .height(30.dp)
-//                            .width(70.dp)
-//                            .padding(end = 4.dp),
-//                        contentScale = ContentScale.Fit
-//                    )
-//                }
-                Image(
-                    painter = painterResource(id = R.drawable.brand_hyundai),
-                    contentDescription = "기본 로고",
+                AsyncImage(
+                    model = imageRes,
+                    contentDescription = "$name 로고",
                     modifier = Modifier
                         .height(30.dp)
                         .width(70.dp)
@@ -278,6 +248,8 @@ fun ManufacturerCard(
     }
 }
 
+
+// 모델, 서브 모델 선택 결과
 @Composable
 fun SelectedFilterSummary(
     brand: String,
@@ -319,7 +291,6 @@ fun SelectedFilterSummary(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 모델
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -332,7 +303,7 @@ fun SelectedFilterSummary(
 
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                         if (model.isNotBlank()) {
-                            SubModelChip(
+                            ModelBox(
                                 text = model,
                                 onDelete = onModelClear,
                             )
@@ -384,7 +355,7 @@ fun SelectedFilterSummary(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             subModels.forEach { subModel ->
-                                SubModelChip(text = subModel) {
+                                ModelBox(text = subModel) {
                                     onSubModelClear(subModel)
                                 }
                             }
@@ -396,9 +367,8 @@ fun SelectedFilterSummary(
     }
 }
 
-
 @Composable
-fun SubModelChip(text: String, onDelete: () -> Unit) {
+fun ModelBox(text: String, onDelete: () -> Unit) {
     Box(
         modifier = Modifier
             .background(Color(0xFFEDEDED), RoundedCornerShape(25))
