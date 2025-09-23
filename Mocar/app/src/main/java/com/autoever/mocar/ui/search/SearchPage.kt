@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
@@ -196,19 +197,29 @@ fun SearchPage(
                         searchBarViewModel.deactivateSearch() },
                     onKeywordClick = {
                         searchBarViewModel.updateQuery(it)
-                        searchBarViewModel.submitSearch(userId)
                     },
                     onRemoveKeyword = { searchBarViewModel.removeKeyword(it) },
                     onClearAll = { searchBarViewModel.clearAllKeywords(userId) },
                     onSearchSubmit = {
                         searchBarViewModel.submitSearch(userId)
                         focusManager.clearFocus()
-                        searchBarViewModel.deactivateSearch()
+//                        searchBarViewModel.deactivateSearch()
                                      },
-                    onCarClick = {
-                        searchBarViewModel.selectCar(it, userId)
+                    onCarClick = { car ->
+                        searchBarViewModel.selectCar(car, userId)
+
+                        searchFilterViewModel.setFilterParamsFromCurrentState(
+                            brand = car.brand,
+                            model = car.model,
+                            subModels = listOfNotNull(car.title),
+                            filterState = searchFilterViewModel.filterState.value
+                        )
+
                         searchBarViewModel.deactivateSearch()
-                        navController.popBackStack()
+                        searchBarViewModel.updateQuery("")
+
+//                        결과페이지 내비게이션추가
+//                        navController.navigate("")
                     }
                 )
             } else {
@@ -360,11 +371,18 @@ fun LeftMenu(selected: String,
         modifier = Modifier
             .width(100.dp)
             .fillMaxSize()
-            .background(Color(0xFFEDEDED))
+            .background(Color(0xFFE9ECEF))
             .padding(start = 0.dp)
             .drawBehind {
                 val strokeWidth = 0.5.dp.toPx()
                 val color = Color(0xFFD7D7D7)
+
+                drawLine(
+                    color = color,
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, 0f),
+                    strokeWidth = strokeWidth
+                )
                 // 우측
                 drawLine(
                     color = color,
@@ -377,6 +395,7 @@ fun LeftMenu(selected: String,
         verticalArrangement = Arrangement.Top,
     ) {
         menuItems.forEach { item ->
+
             val isChanged = when (item) {
                 "제조사"   -> searchManufacturerViewModel.selectedBrand != null
                 "가격"     -> state.priceRange != default.priceRange
@@ -392,11 +411,12 @@ fun LeftMenu(selected: String,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
-                    .background(if (selected == item) Color.White else Color(0xFFEDEDED))
+                    .background(if (selected == item) Color.White else Color(0xFFE9ECEF))
                     .clickable { onSelect(item) },
                 contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()) {
                     Text(
                         text = item,
                         modifier = Modifier
@@ -470,6 +490,15 @@ fun BottomButtons(
                     subModels = searchManufacturerViewModel.selectedSubModels,
                     filterState = searchFilterViewModel.filterState.value
                 )
+                searchFilterViewModel.setFilterParamsFromCurrentState(
+                    brand = searchManufacturerViewModel.selectedBrand,
+                    model = searchManufacturerViewModel.selectedModel,
+                    subModels = searchManufacturerViewModel.selectedSubModels,
+                    filterState = searchFilterViewModel.filterState.value
+                )
+//                        결과페이지 내비게이션추가
+//                        navController.navigate("")
+
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
@@ -506,7 +535,7 @@ fun SearchFullScreen(
 
         Row(
             modifier = Modifier.fillMaxWidth()
-                .padding(vertical = 5.dp),
+                .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -525,7 +554,7 @@ fun SearchFullScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (searchState.recentKeywords.isEmpty() && searchState.query.isBlank()) {
             Text(
@@ -539,8 +568,8 @@ fun SearchFullScreen(
             items(searchState.recentKeywords) { keyword ->
                 Row(
                     modifier = Modifier
-                        .background(Color(0xFFE0E0E0), RoundedCornerShape(20.dp))
-                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                        .background(Color(0xFFE9ECEF), RoundedCornerShape(20.dp))
+                        .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -554,7 +583,7 @@ fun SearchFullScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = Icons.Default.Cancel,
                         contentDescription = "삭제",
                         tint = Color.Gray,
                         modifier = Modifier
@@ -618,18 +647,6 @@ fun getFilteredListings(
     model: String?,
     subModels: List<String>
 ): List<ListingDto> {
-    println("[필터링 시작]")
-    println("현재 필터 조건:")
-    println(" - 브랜드: $brand")
-    println(" - 모델: $model")
-    println(" - 서브모델: $subModels")
-    println(" - 차종: ${filter.selectedTypes}")
-    println(" - 연료: ${filter.selectedFuels}")
-    println(" - 지역: ${filter.selectedRegions}")
-    println(" - 가격: ${filter.priceRange.start} ~ ${filter.priceRange.endInclusive}")
-    println(" - 연식: ${filter.yearRange.start} ~ ${filter.yearRange.endInclusive}")
-    println(" - 주행거리: ${filter.mileageRange.start} ~ ${filter.mileageRange.endInclusive}")
-
     val filtered = allListings.filter { car ->
         val carType = car.carType?.lowercase()?.trim() ?: ""
         val fuel = car.fuel?.lowercase()?.trim() ?: ""
