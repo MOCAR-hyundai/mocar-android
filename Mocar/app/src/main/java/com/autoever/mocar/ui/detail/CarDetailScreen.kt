@@ -25,16 +25,22 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -56,8 +63,8 @@ import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.domain.model.Seller
 import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
 import com.autoever.mocar.ui.common.util.formatKrwPretty
+import com.autoever.mocar.viewmodel.ListingStatus
 import com.autoever.mocar.viewmodel.PriceUi
-import org.checkerframework.checker.units.qual.min
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -65,24 +72,42 @@ fun CarDetailScreen(
     car: Car,
     seller: Seller?,
     price: PriceUi?,
+    isOwner: Boolean,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onChangeStatus: (String) -> Unit,
     onBuyClick: () -> Unit
 ) {
 
     var isFav by remember(car.id) { mutableStateOf(car.isFavorite) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var status by remember(car.id) { mutableStateOf(car.status) }
 
     Scaffold(
         topBar = {
-            MocarTopBar(
-                title = { Text(car.plateNo, style = MaterialTheme.typography.titleMedium) },
-                onBack = onBack,
-                onMore = { /* TODO: 메뉴 */ }
-            )
+            Box(Modifier.fillMaxWidth()) {
+                MocarTopBar(
+                    title = { Text(car.plateNo, style = MaterialTheme.typography.titleMedium) },
+                    onBack = onBack,
+                    onMore = null,
+                    rightContent = if (isOwner) {
+                        {
+                            StatusChanger(
+                                isOwner = true,
+                                onChangeStatus = { newStatus ->
+                                    status = newStatus
+                                    onChangeStatus(newStatus)
+                                }
+                            )
+                        }
+                    } else null
+                )
+            }
         },
         bottomBar = {
             BottomActionBar(
                 priceRange = formatKrwPretty(car.priceKRW),
+                enabled = status != ListingStatus.SOLD,
                 onBuy = onBuyClick
             )
         }
@@ -410,6 +435,7 @@ private fun PriceSlider() {
 @Composable
 private fun BottomActionBar(
     priceRange: String,
+    enabled: Boolean = true,
     onBuy: () -> Unit
 ) {
     Surface(shadowElevation = 8.dp, color = Color.White) {
@@ -420,11 +446,19 @@ private fun BottomActionBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val bg = if (enabled) Color(0xFF2A5BFF) else Color(0xFFE5E7EB)
+            val fg = if (enabled) Color.White else Color(0xFF9CA3AF)
+
             Surface(
                 modifier = Modifier
                     .height(48.dp)
                     .fillMaxWidth() // 전체 폭 사용
-                    .clickable { onBuy() },
+                    .let { if (enabled) it.clickable { onBuy() } else it }
+                    .then(
+                        if (enabled) Modifier.clickable(onClick = onBuy)
+                        else Modifier
+                    )
+                    .alpha(if (enabled) 1f else 0.6f),
                 shape = RoundedCornerShape(12.dp),
                 color = Color(0xFF2A5BFF)
             ) {
@@ -545,6 +579,63 @@ fun PriceBandReadonly(
                 color = Color(0xFF9CA3AF),
                 fontSize = 11.sp,
                 modifier = Modifier.align(Alignment.CenterEnd)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusChanger(
+    isOwner: Boolean,
+    onChangeStatus: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (!isOwner) return
+
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier) {
+        TextButton(
+            onClick = { expanded = true },
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = Color(0xFF111827) //검정색
+            )
+        ) {
+            Text("상태변경")
+            Icon(
+                imageVector = Icons.Rounded.ArrowDropDown,
+                contentDescription = null
+            )
+        }
+
+        // 라벨 바로 아래로 붙는 드롭다운
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color.White)
+        ) {
+            DropdownMenuItem(
+                text = { Text("판매중") },
+                onClick = {
+                    expanded = false
+                    onChangeStatus(ListingStatus.ON_SALE) // "on_sale"
+                }
+            )
+            Divider(color = Color(0xFFE5E7EB))
+            DropdownMenuItem(
+                text = { Text("예약중") },
+                onClick = {
+                    expanded = false
+                    onChangeStatus(ListingStatus.RESERVED) // "reserved"
+                }
+            )
+            Divider(color = Color(0xFFE5E7EB))
+            DropdownMenuItem(
+                text = { Text("판매완료") },
+                onClick = {
+                    expanded = false
+                    onChangeStatus(ListingStatus.SOLD) // "sold"
+                }
             )
         }
     }

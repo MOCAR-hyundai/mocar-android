@@ -45,6 +45,8 @@ interface MocarRepository {
     fun chatRooms(myUid: String): Flow<List<ChatRoom>>
 
     fun sellerById(uid: String): Flow<Seller?>
+
+    suspend fun updateListingStatus(listingId: String, status: String)
 }
 
 sealed class StartSaleResult {
