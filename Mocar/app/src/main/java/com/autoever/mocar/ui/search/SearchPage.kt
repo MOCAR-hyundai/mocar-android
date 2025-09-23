@@ -102,6 +102,7 @@ fun SearchPage(
     LaunchedEffect(userId) {
         if (userId.isNotBlank()) {
             searchBarViewModel.loadRecentKeywords(userId)
+            searchFilterViewModel.loadSearchHistory(userId)
         }
     }
 
@@ -132,6 +133,7 @@ fun SearchPage(
             ).size
         }
     }
+    val history by searchFilterViewModel.filterHistory.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -237,11 +239,14 @@ fun SearchPage(
                             .clickable {
                                 showSheet = true
                             },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("최근 검색 기록 ")
+                        Text("최근 검색 기록 ${history.size} ")
                         Icon(
                             imageVector = Icons.Default.ArrowForwardIos,
                             contentDescription = "최근검색기록",
+                            modifier = Modifier.size(16.dp)
+                                .padding(top = 2.dp),
                             tint = Color.Gray
                         )
                     }
@@ -633,8 +638,14 @@ fun SearchFullScreen(
 
         } else {
             // 검색 결과 없음
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("검색 결과가 없습니다.", color = Color.Gray)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("검색 결과가 없습니다.", color = Color.Gray)
+            }
         }
     }
 }
@@ -764,7 +775,7 @@ fun SearchHistoryScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 25.dp)
+                    .padding(horizontal = 18.dp)
             ) {
                 itemsIndexed(history) { index, item ->
                     val displayFilters = mutableListOf<String>()
@@ -788,7 +799,7 @@ fun SearchHistoryScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 6.dp)
-                            .background(Color(0xFFF4F4F4), RoundedCornerShape(12.dp))
+                            .background(Color(0xFFE9ECEF), RoundedCornerShape(12.dp))
                             .clickable {
                                 searchFilterViewModel.restoreFrom(item)
                                 searchManufacturerViewModel.restoreFrom(item)
@@ -831,7 +842,7 @@ fun SearchHistoryScreen(
 
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Default.Cancel,
                                 contentDescription = "삭제",
                                 tint = Color.Gray
                             )
