@@ -207,7 +207,10 @@ fun RangeInputSlider(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Text(title, fontSize = 16.sp, modifier = Modifier.padding(vertical = 8.dp))
+        Text(text = title,
+            fontSize = 16.sp,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(vertical = 8.dp))
 
         RangeSlider(
             value = currentRange,
