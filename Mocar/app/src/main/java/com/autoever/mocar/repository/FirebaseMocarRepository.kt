@@ -9,6 +9,7 @@ import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.price.PriceIndexDto
 import com.autoever.mocar.domain.model.ChatRoom
 import com.autoever.mocar.domain.model.Message
+import com.autoever.mocar.domain.model.Seller
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -248,4 +249,23 @@ class FirebaseMocarRepository(
 
         awaitClose { regs.forEach { it.remove() } }
     }
+
+    override fun sellerById(uid: String): Flow<Seller?> = callbackFlow {
+        val reg = db.collection("users").document(uid)
+            .addSnapshotListener { snap, _ ->
+                if (snap != null && snap.exists()) {
+                    trySend(
+                        Seller(
+                            id = snap.id,
+                            name = snap.getString("name") ?: "",
+                            photoUrl = snap.getString("photoUrl") ?: "",
+                            rating = snap.getDouble("rating") ?: 0.0,
+                            ratingCount = (snap.getLong("ratingCount") ?: 0L).toInt()
+                        )
+                    )
+                } else trySend(null)
+            }
+        awaitClose { reg.remove() }
+    }
+
 }
