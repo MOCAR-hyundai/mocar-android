@@ -35,6 +35,7 @@ import coil.compose.AsyncImage
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.listings.toCar
 import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
+import com.autoever.mocar.ui.common.util.formatKrwPretty
 import com.autoever.mocar.viewmodel.ResultFilterParams
 import com.autoever.mocar.viewmodel.SearchResultViewModel
 import java.text.NumberFormat
@@ -652,7 +653,11 @@ fun CarCardVertical(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${NumberFormat.getNumberInstance(Locale.KOREA).format(car.priceKRW)}만원",
+                formatKrwPretty(car.priceKRW),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2A5BFF)
+                ),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 color = Color(0xFF3058EF)

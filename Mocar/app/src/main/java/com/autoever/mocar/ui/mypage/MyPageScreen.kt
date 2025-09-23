@@ -30,8 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 fun MyPageScreen(
     navController: NavHostController,
-    onWishListClick: () -> Unit,
-    onPurchaseListClick: () -> Unit,
     onRegisterListClick: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
@@ -429,16 +427,4 @@ fun MyPageScreen(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MyPageScreenPreview() {
-    MyPageScreen(
-        navController = rememberNavController(),
-        onWishListClick = {},
-        onPurchaseListClick = {},
-        onRegisterListClick = {},
-        onSettingsClick = {},
-    )
 }

@@ -228,13 +228,13 @@ fun CarCardWithStatus(
                 order?.let {
                     when (it.status.lowercase()) {
                         "reserved" -> Text(
-                            text = "예약일: ${it.reservedAt?.substring(0,10) ?: "-"}",
+                            text = "예약일: ${it.reservedAt?.toKoreanDateFormat() ?: "-"}",
                             color = Color(0xFFFFA500),
                             fontSize = 12.sp,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                         "sold" -> Text(
-                            text = "판매일: ${it.soldAt?.substring(0,10) ?: "-"}",
+                            text = "판매일: ${it.soldAt?.toKoreanDateFormat() ?: "-"}",
                             color = Color(0xFF4CAF50),
                             fontSize = 12.sp,
                             modifier = Modifier.padding(bottom = 4.dp)
@@ -251,6 +251,15 @@ fun CarCardWithStatus(
             }
         }
     }
+}
+
+private fun String.toKoreanDateFormat(): String {
+    // yyyy-MM-dd 형식 예상
+    if (this.length < 10) return this
+    val year = substring(0, 4)
+    val month = substring(5, 7)
+    val day = substring(8, 10)
+    return "${year}년 ${month}월 ${day}일"
 }
 
 /* ---------------- 확장함수: Car → CarUi ---------------- */
