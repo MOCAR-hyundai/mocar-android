@@ -153,7 +153,6 @@ fun SearchPage(
                 BottomButtons(
                     navController = navController,
                     userId = userId,
-                    navController = navController,
                     searchFilterViewModel = searchFilterViewModel,
                     searchManufacturerViewModel = searchManufacturerViewModel,
                     totalFilteredCount = totalFilteredCount,
@@ -466,7 +465,6 @@ fun LeftMenu(selected: String,
 fun BottomButtons(
     navController: NavController,
     userId: String,
-    navController : NavController,
     searchFilterViewModel: SearchFilterViewModel,
     searchManufacturerViewModel: SearchManufacturerViewModel,
     totalFilteredCount: Int,

@@ -1,4 +1,6 @@
 import android.app.Application
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +37,7 @@ const val ROUTE_CAR_DETAIL = "carDetail"
 const val ROUTE_SEARCH = "search"
 fun carDetailRoute(carId: String) = "$ROUTE_CAR_DETAIL/$carId"
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MocarNavigation() {
     val navController = rememberNavController()
@@ -163,9 +166,7 @@ fun MocarNavigation() {
         composable("result") {
             SearchResultPage(
                 navController = navController,
-                searchManufacturerViewModel = searchManufacturerViewModel,
-                searchFilterViewModel = searchFilterViewModel,
-                listingViewModel = listingViewModel,
+                searchResultViewModel = searchResultViewModel,
                 onBack = { navController.popBackStack() }
             )
         }
