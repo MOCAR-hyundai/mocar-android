@@ -196,8 +196,8 @@ fun RangeInputSlider(
     currentRange: ClosedFloatingPointRange<Float>,
     onValueChange: (ClosedFloatingPointRange<Float>) -> Unit
 ) {
-    var minInput by remember(currentRange) { mutableStateOf(currentRange.start.toInt().toString()) }
-    var maxInput by remember(currentRange) { mutableStateOf(currentRange.endInclusive.toInt().toString()) }
+    var minInput by remember(currentRange) { mutableStateOf("") }
+    var maxInput by remember(currentRange) { mutableStateOf("") }
 
     Column(
         modifier = Modifier
