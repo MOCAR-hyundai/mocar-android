@@ -31,9 +31,6 @@ interface MocarRepository {
     ): StartSaleResult
 
     // ---------------- 채팅 ----------------
-    /** 내가 속한 채팅방 스트림 */
-    fun myChatRooms(uid: String): Flow<List<ChatRoom>>
-
     /** 특정 채팅방 메시지 스트림 */
     fun chatMessages(chatId: String, limit: Int = 200): Flow<List<Message>>
 
@@ -42,6 +39,9 @@ interface MocarRepository {
 
     /** 채팅방 오픈 (없으면 새로 만들고, 있으면 기존거 리턴) */
     suspend fun openChatForListing(listingId: String, buyerId: String, sellerId: String): String
+
+    /** 내가 속한 채팅방 스트림 */
+    fun chatRooms(myUid: String): Flow<List<ChatRoom>>
 }
 
 sealed class StartSaleResult {

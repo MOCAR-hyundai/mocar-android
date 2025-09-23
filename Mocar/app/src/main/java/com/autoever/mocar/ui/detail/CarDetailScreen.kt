@@ -83,7 +83,7 @@ fun CarDetailScreen(
         bottomBar = {
             BottomActionBar(
                 priceRange = formatKrwPretty(car.priceKRW),
-                onBuy = { onBuyClick() }
+                onBuy = onBuyClick
             )
         }
     ) { inner ->

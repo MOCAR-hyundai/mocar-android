@@ -11,6 +11,7 @@ import com.autoever.mocar.domain.model.ChatRoom
 import com.autoever.mocar.domain.model.Message
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -155,34 +156,6 @@ class FirebaseMocarRepository(
 
     private fun chatDoc(chatId: String) = db.collection("chats").document(chatId)
 
-    override fun myChatRooms(uid: String): Flow<List<ChatRoom>> = callbackFlow {
-        // buyerId == uid
-        val sub1 = db.collection("chats")
-            .whereEqualTo("buyerId", uid)
-            .orderBy("lastAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snap, e ->
-                if (e != null) { trySend(emptyList()); return@addSnapshotListener }
-                val rooms = snap?.documents?.mapNotNull { d ->
-                    d.toObject(ChatRoomDto::class.java)?.copy(chatId = d.id)?.toDomain(uid)
-                } ?: emptyList()
-                trySend(rooms)
-            }
-
-        // sellerId == uid
-        val sub2 = db.collection("chats")
-            .whereEqualTo("sellerId", uid)
-            .orderBy("lastAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snap, e ->
-                if (e != null) { trySend(emptyList()); return@addSnapshotListener }
-                val rooms = snap?.documents?.mapNotNull { d ->
-                    d.toObject(ChatRoomDto::class.java)?.copy(chatId = d.id)?.toDomain(uid)
-                } ?: emptyList()
-                trySend(rooms)
-            }
-
-        awaitClose { sub1.remove(); sub2.remove() }
-    }
-
     override fun chatMessages(chatId: String, limit: Int): Flow<List<Message>> = callbackFlow {
         val sub = chatDoc(chatId)
             .collection("messages")
@@ -240,5 +213,39 @@ class FirebaseMocarRepository(
             ).await()
         }
         return chatId
+    }
+
+    override fun chatRooms(myUid: String): Flow<List<ChatRoom>> = callbackFlow {
+        val map = LinkedHashMap<String, ChatRoomDto>() // id 중복 방지 + 정렬 유지
+        val regs = mutableListOf<ListenerRegistration>()
+
+        fun push() {
+            val list = map.values
+                .sortedByDescending { it.lastAt ?: Timestamp(0,0) }
+                .map { dto -> dto.toDomain(myUid) }   // ← chats/ChatRoomDto → domain.ChatRoom
+            trySend(list)
+        }
+
+        regs += db.collection("chats")
+            .whereEqualTo("buyerId", myUid)
+            .addSnapshotListener { snap, _ ->
+                snap?.documents?.forEach { d ->
+                    d.toObject(ChatRoomDto::class.java)
+                        ?.let { map[d.id] = it.copy(chatId = d.id) }
+                }
+                push()
+            }
+
+        regs += db.collection("chats")
+            .whereEqualTo("sellerId", myUid)
+            .addSnapshotListener { snap, _ ->
+                snap?.documents?.forEach { d ->
+                    d.toObject(ChatRoomDto::class.java)
+                        ?.let { map[d.id] = it.copy(chatId = d.id) }
+                }
+                push()
+            }
+
+        awaitClose { regs.forEach { it.remove() } }
     }
 }
