@@ -1,3 +1,6 @@
+import android.annotation.SuppressLint
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,225 +12,156 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.autoever.mocar.data.listings.ListingDto
+import com.autoever.mocar.data.listings.toCar
+import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
+import com.autoever.mocar.viewmodel.ResultFilterParams
+import com.autoever.mocar.viewmodel.SearchResultViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.navigation.NavController
-import com.autoever.mocar.data.listings.ListingDto
-import com.autoever.mocar.ui.search.getFilteredListings
-import com.autoever.mocar.viewmodel.ListingViewModel
-import com.autoever.mocar.viewmodel.SearchFilterViewModel
-import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
-
-// 데이터 모델
-data class Car(
-    val id: String,
-    val imageUrl: String,
-    val trim: String,
-    val year: Int,
-    val mileage: Int,
-    val fuelType: String,
-    val region: String,
-    val price: Int,
-    var isFavorite: Boolean = false
-)
-
-data class CarFilter(
-    val minPrice: Int? = null,
-    val maxPrice: Int? = null,
-    val minYear: Int? = null,
-    val maxYear: Int? = null,
-    val minMileage: Int? = null,
-    val maxMileage: Int? = null,
-    val fuelType: String? = null,
-    val region: String? = null
-)
-
-// 메인 화면
-@Composable
-fun SearchResultScreen(
-    cars: List<Car>,
-    filter: CarFilter = CarFilter(),
-    onCarClick: (Car) -> Unit = {},
-    onFavoriteClick: (Car) -> Unit = {}
-) {
-    var appliedFilter by remember { mutableStateOf(filter) }
-
-    fun applyFilter(list: List<Car>, filter: CarFilter): List<Car> {
-        return list.filter { car ->
-            (filter.minPrice == null || car.price >= filter.minPrice) &&
-                    (filter.maxPrice == null || car.price <= filter.maxPrice) &&
-                    (filter.minYear == null || car.year >= filter.minYear) &&
-                    (filter.maxYear == null || car.year <= filter.maxYear) &&
-                    (filter.minMileage == null || car.mileage >= filter.minMileage) &&
-                    (filter.maxMileage == null || car.mileage <= filter.maxMileage) &&
-                    (filter.fuelType == null || car.fuelType == filter.fuelType) &&
-                    (filter.region == null || car.region == filter.region)
-        }
-    }
-
-    val filteredCars = applyFilter(cars, appliedFilter)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        FilterRowSection(
-            filter = appliedFilter,
-            onFilterChange = { newFilter -> appliedFilter = newFilter }
-        )
-
-        if (filteredCars.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("검색 결과가 없습니다.", color = Color.Gray)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val carPairs = filteredCars.chunked(2)
-                items(carPairs.size) { idx ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        CarCardVertical(
-                            car = carPairs[idx][0],
-                            onClick = { onCarClick(carPairs[idx][0]) },
-                            onFavoriteClick = {
-                                carPairs[idx][0].isFavorite = !carPairs[idx][0].isFavorite
-                                onFavoriteClick(carPairs[idx][0])
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (carPairs[idx].size > 1) {
-                            CarCardVertical(
-                                car = carPairs[idx][1],
-                                onClick = { onCarClick(carPairs[idx][1]) },
-                                onFavoriteClick = {
-                                    carPairs[idx][1].isFavorite = !carPairs[idx][1].isFavorite
-                                    onFavoriteClick(carPairs[idx][1])
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SearchResultPage(
     navController: NavController,
-    searchManufacturerViewModel: SearchManufacturerViewModel,
-    searchFilterViewModel: SearchFilterViewModel,
-    listingViewModel: ListingViewModel,
+    searchResultViewModel: SearchResultViewModel,
     onBack: () -> Unit
 ) {
-    val listings: List<ListingDto> by listingViewModel.listings.collectAsState()
-    val state by searchFilterViewModel.filterState.collectAsState()
+    val results by searchResultViewModel.results.collectAsState()
+    val favorites by searchResultViewModel.favorites.collectAsState()
 
-    val filteredListings by remember(
-        listings,
-        state,
-        searchManufacturerViewModel.selectedBrand,
-        searchManufacturerViewModel.selectedModel,
-        searchManufacturerViewModel.selectedSubModels
-    ) {
-        derivedStateOf {
-            getFilteredListings(
-                allListings = listings,
-                filter = state,
-                brand = searchManufacturerViewModel.selectedBrand,
-                model = searchManufacturerViewModel.selectedModel,
-                subModels = searchManufacturerViewModel.selectedSubModels
+    LaunchedEffect(results) {
+        println("SearchResultViewModel에 저장된 결과: ${results.size}대")
+        results.forEach { println(it) }
+    }
+
+    var filterParams by remember {
+        mutableStateOf(
+            ResultFilterParams(
+                subModels = emptyList(),
+                minPrice = 0f,
+                maxPrice = 20000000f, // 단위: 원
+                minYear = 2000f,
+                maxYear = 2025f,
+                minMileage = 0f,
+                maxMileage = 300000f,
+                types = emptyList(),
+                fuels = emptyList(),
+                regions = emptyList(),
             )
+        )
+    }
+
+    fun applyFilter(results: List<ListingDto>, filter: ResultFilterParams?): List<ListingDto> {
+        if (filter == null) return results
+
+        return results.filter { car ->
+            (filter.minPrice <= car.price && car.price <= filter.maxPrice) &&
+                    (filter.minYear <= car.year && car.year <= filter.maxYear) &&
+                    (filter.minMileage <= car.mileage && car.mileage <= filter.maxMileage) &&
+                    (filter.types.isEmpty() || filter.types.contains(car.carType)) &&
+                    (filter.fuels.isEmpty() || filter.fuels.contains(car.fuel)) &&
+                    (filter.regions.isEmpty() || filter.regions.contains(car.region))
         }
     }
 
+    val filteredCars = applyFilter(results, filterParams)
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("검색 결과 (${filteredListings.size}대)") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = "뒤로가기")
-                    }
-                }
+            MocarTopBar(
+                title = { Text("검색 결과 (${filteredCars.size}대)", style = MaterialTheme.typography.titleMedium) },
+                onBack = onBack,
+                onMore = { /* TODO: 메뉴 */ }
             )
         }
-    ) { paddingValues ->
-        if (filteredListings.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("검색 결과가 없습니다.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredListings.size) { index ->
-                    val listing = filteredListings[index]
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { navController.navigate("carDetail/${listing.listingId}") }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("${listing.brand} ${listing.model} ${listing.trim}", fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(4.dp))
-                            Text("${listing.year}년 · ${listing.mileage}km · ${listing.fuel}", color = Color.Gray)
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(innerPadding)
+        ) {
+            FilterRowSection(
+                filter = filterParams,
+                onFilterChange = { newFilter -> filterParams = newFilter }
+            )
+            if (filteredCars.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("검색 결과가 없습니다.", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val favoriteIds = favorites.map { it.listingId }.toSet()
+                    val carPairs = filteredCars.chunked(2)
+                    items(carPairs.size) { idx ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            val car1 = carPairs[idx][0]
+                            CarCardVertical(
+                                listing = car1,
+                                isFavorite = favoriteIds.contains(car1.listingId),
+                                onClick = { navController.navigate(carDetailRoute(car1.listingId)) },
+                                onFavoriteClick = {
+                                    if (favoriteIds.contains(car1.listingId)) {
+                                        searchResultViewModel.removeFavorite(car1.listingId)
+                                    } else {
+                                        searchResultViewModel.addFavorite(car1)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            if (carPairs[idx].size > 1) {
+                                val car2 = carPairs[idx][1]
+                                CarCardVertical(
+                                    listing = car2,
+                                    isFavorite = favoriteIds.contains(car2.listingId),
+                                    onClick = { navController.navigate(carDetailRoute(car2.listingId)) },
+                                    onFavoriteClick = {
+                                        if (favoriteIds.contains(car2.listingId)) {
+                                            searchResultViewModel.removeFavorite(car2.listingId)
+                                        } else {
+                                            searchResultViewModel.addFavorite(car2)
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
-                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
-                    }
-                    if (index < filteredListings.lastIndex) {
-                        Divider(color = Color(0xFFE0E0E0))
                     }
                 }
             }
@@ -238,17 +172,18 @@ fun SearchResultPage(
 // 필터 Row
 @Composable
 fun FilterRowSection(
-    filter: CarFilter,
-    onFilterChange: (CarFilter) -> Unit
+    filter: ResultFilterParams,
+    onFilterChange: (ResultFilterParams) -> Unit
 ) {
-    var minPrice by remember { mutableStateOf(filter.minPrice ?: 1000) }
-    var maxPrice by remember { mutableStateOf(filter.maxPrice ?: 4000) }
-    var minYear by remember { mutableStateOf(filter.minYear ?: 2015) }
-    var maxYear by remember { mutableStateOf(filter.maxYear ?: 2023) }
-    var minMileage by remember { mutableStateOf(filter.minMileage ?: 0) }
-    var maxMileage by remember { mutableStateOf(filter.maxMileage ?: 50000) }
-    var selectedFuelType by remember { mutableStateOf(filter.fuelType ?: "전체") }
-    var selectedRegion by remember { mutableStateOf(filter.region ?: "전체") }
+    var minPrice by remember { mutableStateOf(filter.minPrice) }
+    var maxPrice by remember { mutableStateOf(filter.maxPrice) }
+    var minYear by remember { mutableStateOf(filter.minYear) }
+    var maxYear by remember { mutableStateOf(filter.maxYear) }
+    var minMileage by remember { mutableStateOf(filter.minMileage) }
+    var maxMileage by remember { mutableStateOf(filter.maxMileage) }
+
+    var selectedFuelType by remember { mutableStateOf("전체") }
+    var selectedRegion by remember { mutableStateOf("전체") }
 
     var showPriceDialog by remember { mutableStateOf(false) }
     var showYearDialog by remember { mutableStateOf(false) }
@@ -283,8 +218,8 @@ fun FilterRowSection(
             currentMax = maxPrice.toFloat(),
             onDismiss = { showPriceDialog = false },
             onApply = { min, max ->
-                minPrice = min
-                maxPrice = max
+                minPrice = min * 10000f  // 만원 → 원 변환
+                maxPrice = max * 10000f
                 showPriceDialog = false
                 onFilterChange(
                     filter.copy(
@@ -294,8 +229,8 @@ fun FilterRowSection(
                         maxYear = maxYear,
                         minMileage = minMileage,
                         maxMileage = maxMileage,
-                        fuelType = if (selectedFuelType == "전체") null else selectedFuelType,
-                        region = if (selectedRegion == "전체") null else selectedRegion
+                        fuels = if (selectedFuelType == "전체") emptyList() else listOf(selectedFuelType),
+                        regions = if (selectedRegion == "전체") emptyList() else listOf(selectedRegion)
                     )
                 )
             }
@@ -313,8 +248,8 @@ fun FilterRowSection(
             currentMax = maxYear.toFloat(),
             onDismiss = { showYearDialog = false },
             onApply = { min, max ->
-                minYear = min
-                maxYear = max
+                minPrice = min * 10000f  // 만원 → 원 변환
+                maxPrice = max * 10000f
                 showYearDialog = false
                 onFilterChange(
                     filter.copy(
@@ -324,8 +259,8 @@ fun FilterRowSection(
                         maxYear = maxYear,
                         minMileage = minMileage,
                         maxMileage = maxMileage,
-                        fuelType = if (selectedFuelType == "전체") null else selectedFuelType,
-                        region = if (selectedRegion == "전체") null else selectedRegion
+                        fuels = if (selectedFuelType == "전체") emptyList() else listOf(selectedFuelType),
+                        regions = if (selectedRegion == "전체") emptyList() else listOf(selectedRegion)
                     )
                 )
             }
@@ -343,8 +278,8 @@ fun FilterRowSection(
             currentMax = maxMileage.toFloat(),
             onDismiss = { showMileageDialog = false },
             onApply = { min, max ->
-                minMileage = min
-                maxMileage = max
+                minPrice = min * 10000f  // 만원 → 원 변환
+                maxPrice = max * 10000f
                 showMileageDialog = false
                 onFilterChange(
                     filter.copy(
@@ -354,8 +289,8 @@ fun FilterRowSection(
                         maxYear = maxYear,
                         minMileage = minMileage,
                         maxMileage = maxMileage,
-                        fuelType = if (selectedFuelType == "전체") null else selectedFuelType,
-                        region = if (selectedRegion == "전체") null else selectedRegion
+                        fuels = if (selectedFuelType == "전체") emptyList() else listOf(selectedFuelType),
+                        regions = if (selectedRegion == "전체") emptyList() else listOf(selectedRegion)
                     )
                 )
             }
@@ -369,7 +304,15 @@ fun FilterRowSection(
             options = fuelTypes,
             selectedOption = selectedFuelType,
             onDismiss = { showFuelDialog = false },
-            onApply = { selectedFuelType = it; showFuelDialog = false; onFilterChange(filter.copy(fuelType = if (it=="전체") null else it)) }
+            onApply = {
+                selectedFuelType = it
+                showFuelDialog = false
+                onFilterChange(
+                    filter.copy(
+                        fuels = if (it == "전체") emptyList() else listOf(it)
+                    )
+                )
+            }
         )
     }
 
@@ -380,7 +323,15 @@ fun FilterRowSection(
             options = regions,
             selectedOption = selectedRegion,
             onDismiss = { showRegionDialog = false },
-            onApply = { selectedRegion = it; showRegionDialog = false; onFilterChange(filter.copy(region = if (it=="전체") null else it)) }
+            onApply = {
+                selectedRegion = it
+                showRegionDialog = false
+                onFilterChange(
+                    filter.copy(
+                        regions = if (it == "전체") emptyList() else listOf(it)
+                    )
+                )
+            }
         )
     }
 }
@@ -650,11 +601,15 @@ fun FilterLabelButton(label: String, onClick: () -> Unit) {
 // 차 카드
 @Composable
 fun CarCardVertical(
-    car: Car,
+    listing: ListingDto,          // ListingDto 객체
+    isFavorite: Boolean,          // 즐겨찾기 상태 파라미터 추가
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
+    // ListingDto를 Car로 변환할 때 isFavorite 값을 전달
+    val car = listing.toCar(isFavorite)
+
     Column(
         modifier = modifier
             .border(
@@ -671,7 +626,7 @@ fun CarCardVertical(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
-                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)), // 위쪽만 둥글게
+                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
                 contentScale = ContentScale.Crop
             )
             IconButton(
@@ -685,16 +640,17 @@ fun CarCardVertical(
                 )
             }
         }
-        Column(
-            modifier = Modifier
-                .padding(8.dp)
-        ) {
-            Text(car.trim, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Spacer(Modifier.height(4.dp))
-            Text("${car.year}년 · ${car.mileage}km · ${car.fuelType} · ${car.region}" , fontSize = 12.sp, color = Color.Gray)
+        Column(modifier = Modifier.padding(8.dp)) {
+            Text(car.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${NumberFormat.getNumberInstance(Locale.KOREA).format(car.price)}만원",
+                "${car.yearDesc} · ${car.mileageKm}km · ${car.fuel} · ${car.region}",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "${NumberFormat.getNumberInstance(Locale.KOREA).format(car.priceKRW)}만원",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 color = Color(0xFF3058EF)

@@ -133,6 +133,14 @@ fun MocarNavigation() {
             )
         }
 
+        composable("result") {
+            SearchResultPage(
+                navController = navController,
+                searchResultViewModel = searchResultViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable("history") {
             val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
             SearchHistoryScreen(
