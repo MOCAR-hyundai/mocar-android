@@ -173,11 +173,12 @@ fun CarDetailRoute(
             onBack = onBack,
             onToggleFavorite = { vm.toggleFavorite() },
             onBuyClick = {
-                val sellerId = seller?.id ?: return@CarDetailScreen
-                vm.openChat(
-                    sellerId = sellerId,
-                    onSuccess = { chatId -> navToChat(chatId) }
-                )
+                seller?.id?.let { sellerId ->
+                    vm.openChat(
+                        sellerId = sellerId,
+                        onSuccess = { chatId -> navToChat(chatId) }
+                    )
+                }
             }
         )
     }

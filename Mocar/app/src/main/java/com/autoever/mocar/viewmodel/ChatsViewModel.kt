@@ -19,7 +19,7 @@ class ChatsViewModel(
 ) : ViewModel() {
 
     val rooms: StateFlow<List<ChatRoom>> =
-        repo.myChatRooms(uid)
+        repo.chatRooms(uid)
             .map { list ->
                 list
                     .distinctBy { it.id }

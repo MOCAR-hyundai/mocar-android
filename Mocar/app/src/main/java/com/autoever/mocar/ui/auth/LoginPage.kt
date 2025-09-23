@@ -2,6 +2,7 @@ package com.autoever.mocar.ui.auth
 
 import android.content.Context
 import android.util.Log
+import android.util.Patterns
 import android.widget.Toast
 import com.autoever.mocar.R
 import androidx.compose.foundation.Image
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavHostController
+import com.autoever.mocar.ui.common.component.molecules.ToastMessage
 import com.google.firebase.auth.FirebaseAuth
 
 
@@ -52,9 +54,14 @@ fun LoginPage(navController: NavHostController) {
     val passwordVisible = remember { mutableStateOf(false) }
     var keepLoggedIn by remember { mutableStateOf(false) }
 
+    var emailError by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf("") }
+
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
+
+    var toastMessage by remember { mutableStateOf<String?>(null) }
 
     // 로그인 확인
     LaunchedEffect(Unit) {
@@ -122,7 +129,10 @@ fun LoginPage(navController: NavHostController) {
             // 이메일 입력
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    emailError = if (Patterns.EMAIL_ADDRESS.matcher(it).matches()) "" else "유효한 이메일 형식이 아닙니다."
+                                },
                 placeholder = { Text("abc@example.com") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -132,6 +142,17 @@ fun LoginPage(navController: NavHostController) {
                     unfocusedBorderColor = Color.Gray
                 )
             )
+            if (emailError.isNotEmpty()) {
+                Text(
+                    text = emailError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, start = 4.dp)
+                )
+            }
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -145,7 +166,10 @@ fun LoginPage(navController: NavHostController) {
             // 비밀번호 입력
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    passwordError = if (it.length >= 8) "" else "비밀번호는 최소 8자 이상이어야 합니다."
+                                },
                 placeholder = { Text("8자 이상의 비밀번호") },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if(passwordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
@@ -170,6 +194,17 @@ fun LoginPage(navController: NavHostController) {
                     unfocusedBorderColor = Color.Gray
                 )
             )
+            if (passwordError.isNotEmpty()) {
+                Text(
+                    text = passwordError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, start = 4.dp)
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -186,15 +221,19 @@ fun LoginPage(navController: NavHostController) {
                         colors = CheckboxDefaults.colors(
                             checkedColor = Color(0xFF3058EF)
                         ),
+                        modifier = Modifier.offset(x = (-6).dp),
                     )
-                    Text(text = "로그인 상태 유지")
+                    Text(text = "로그인 상태 유지",
+                        modifier = Modifier.offset(x = (-12).dp),)
                 }
 
                 Text(
                     text = "비밀번호 재설정",
-                    modifier = Modifier.clickable {
-                    }
-                        .padding(end = 10.dp)
+                    modifier = Modifier
+                        .clickable {
+                            navController.navigate("resetPassword")
+                        }
+                        .padding(end = 6.dp)
                 )
             }
             Spacer(modifier = Modifier.height(50.dp))
@@ -202,7 +241,7 @@ fun LoginPage(navController: NavHostController) {
             Button(
                 onClick = {
                     if (email.isBlank() || password.isBlank()) {
-                        Toast.makeText(context, "이메일과 비밀번호를 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
+                        toastMessage = "이메일과 비밀번호를 모두 입력해주세요."
                         return@Button
                     }
 
@@ -215,10 +254,8 @@ fun LoginPage(navController: NavHostController) {
                                 navController.navigate("main") {
                                     popUpTo("login") { inclusive = true }
                                 }
-
                             } else {
-                                Log.e("LoginError", "로그인 실패", task.exception)
-                                Toast.makeText(context, "로그인 실패: 이메일 또는 비밀번호를 확인하세요.", Toast.LENGTH_SHORT).show()
+                                toastMessage = "이메일 또는 비밀번호를 확인하세요."
                             }
                         }
                 },
@@ -232,6 +269,14 @@ fun LoginPage(navController: NavHostController) {
             ) {
                 Text(text = "로그인",
                     fontSize = 16.sp
+                )
+            }
+
+            if (toastMessage != null) {
+                ToastMessage(
+                    message = toastMessage!!,
+                    onDismiss = { toastMessage = null },
+                    modifier = Modifier.padding(top = 40.dp)
                 )
             }
 
