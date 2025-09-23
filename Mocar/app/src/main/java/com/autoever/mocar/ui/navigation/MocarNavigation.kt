@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.autoever.mocar.ui.auth.LoginPage
+import com.autoever.mocar.ui.auth.ResetPasswordPage
 import com.autoever.mocar.ui.auth.SignUpPage
 import com.autoever.mocar.ui.chat.ChatRoomScreen
 import com.autoever.mocar.ui.home.MainScreen
@@ -84,6 +85,10 @@ fun MocarNavigation() {
 
         composable("login") {
             LoginPage(navController)
+        }
+
+        composable("resetPassword") {
+            ResetPasswordPage(navController)
         }
 
         composable(

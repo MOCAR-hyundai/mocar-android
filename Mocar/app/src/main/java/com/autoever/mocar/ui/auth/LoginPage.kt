@@ -186,15 +186,19 @@ fun LoginPage(navController: NavHostController) {
                         colors = CheckboxDefaults.colors(
                             checkedColor = Color(0xFF3058EF)
                         ),
+                        modifier = Modifier.offset(x = (-6).dp),
                     )
-                    Text(text = "로그인 상태 유지")
+                    Text(text = "로그인 상태 유지",
+                        modifier = Modifier.offset(x = (-12).dp),)
                 }
 
                 Text(
                     text = "비밀번호 재설정",
-                    modifier = Modifier.clickable {
-                    }
-                        .padding(end = 10.dp)
+                    modifier = Modifier
+                        .clickable {
+                            navController.navigate("resetPassword")
+                        }
+                        .padding(end = 6.dp)
                 )
             }
             Spacer(modifier = Modifier.height(50.dp))
