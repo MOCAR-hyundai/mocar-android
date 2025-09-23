@@ -20,6 +20,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -369,6 +372,7 @@ fun SelectedFilterSummary(
 
 @Composable
 fun ModelBox(text: String, onDelete: () -> Unit) {
+    var lineCount by remember { mutableStateOf(1) }
     Box(
         modifier = Modifier
             .background(Color(0xFFEDEDED), RoundedCornerShape(25))
@@ -380,7 +384,11 @@ fun ModelBox(text: String, onDelete: () -> Unit) {
                 .padding(end = 20.dp), // 아이콘 공간 확보
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = text, fontSize = 14.sp)
+            Text(text = text,
+                fontSize = 14.sp,
+                onTextLayout = { textLayoutResult ->
+                    lineCount = textLayoutResult.lineCount
+                })
         }
 
         Icon(
@@ -388,7 +396,15 @@ fun ModelBox(text: String, onDelete: () -> Unit) {
             contentDescription = "삭제",
             tint = Color.Gray,
             modifier = Modifier
-                .align(Alignment.CenterEnd)
+                .align(
+                    if (lineCount <= 1)
+                        Alignment.CenterEnd
+                    else Alignment.TopEnd)
+                .then(
+                    if (lineCount > 1)
+                        Modifier.padding(top = 2.dp)
+                    else Modifier
+                )
                 .size(16.dp)
                 .clickable { onDelete() }
         )

@@ -246,11 +246,6 @@ fun SubModelSelect(
                 searchManufacturerViewModel.selectedSubModels.clear()
                 searchManufacturerViewModel.selectedSubModels.addAll(selectedItems.map { it.title }.distinct())
 
-                println("Brand: ${searchManufacturerViewModel.selectedBrand}")
-                println("Model: ${searchManufacturerViewModel.selectedModel}")
-                println("SubModels: ${searchManufacturerViewModel.selectedSubModels}")
-
-
                 navController.navigate(ROUTE_SEARCH) {
                     popUpTo("sub_model_select/$brandName/$modelName") { inclusive = true }
                 }

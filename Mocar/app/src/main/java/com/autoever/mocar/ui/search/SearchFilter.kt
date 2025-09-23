@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -196,8 +197,10 @@ fun RangeInputSlider(
     currentRange: ClosedFloatingPointRange<Float>,
     onValueChange: (ClosedFloatingPointRange<Float>) -> Unit
 ) {
-    var minInput by remember(currentRange) { mutableStateOf(currentRange.start.toInt().toString()) }
-    var maxInput by remember(currentRange) { mutableStateOf(currentRange.endInclusive.toInt().toString()) }
+
+    var minInput by remember { mutableStateOf("") }
+    var maxInput by remember { mutableStateOf("") }
+    var previousRange by remember { mutableStateOf(currentRange) }
 
     Column(
         modifier = Modifier
@@ -208,10 +211,21 @@ fun RangeInputSlider(
 
         RangeSlider(
             value = currentRange,
-            onValueChange = {
-                onValueChange(it)
-                minInput = it.start.toInt().toString()
-                maxInput = it.endInclusive.toInt().toString()
+            onValueChange = {newRange ->
+                if (newRange.start == valueRange.start && newRange.endInclusive == valueRange.endInclusive) {
+                    minInput = ""
+                    maxInput = ""
+                } else {
+                    if (newRange.start != previousRange.start) {
+                        minInput = newRange.start.toInt().toString()
+                    }
+                    if (newRange.endInclusive != previousRange.endInclusive) {
+                        maxInput = newRange.endInclusive.toInt().toString()
+                    }
+                }
+
+                previousRange = newRange
+                onValueChange(newRange)
             },
             valueRange = valueRange,
             colors = SliderDefaults.colors(
