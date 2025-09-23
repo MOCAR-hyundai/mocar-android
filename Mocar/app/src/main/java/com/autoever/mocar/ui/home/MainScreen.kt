@@ -1,6 +1,7 @@
 package com.autoever.mocar.ui.home
 
 import ROUTE_SEARCH
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,8 +23,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -56,17 +58,43 @@ fun MainScreen(rootNavController: NavHostController) {
 
     var homeScrollSignal by remember { mutableStateOf(0) }
 
+    // 현재 선택된 탭
+    var selectedTab by rememberSaveable { mutableStateOf(BottomNavItem.BuyCar.route) }
+    // 우리가 관리하는 탭 백스택 (이전 탭들)
+    val tabBackStack = remember { mutableStateListOf<String>() }
+
+    fun navigateToTab(route: String, fromBack: Boolean = false) {
+        if (!fromBack && route != selectedTab) {
+            tabBackStack.add(selectedTab)           // 현재 탭을 스택에 쌓고 이동
+        }
+        selectedTab = route
+        navController.navigate(route) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    fun goPrevTabOrHome() {
+        val target = tabBackStack.lastOrNull() ?: BottomNavItem.BuyCar.route
+        if (tabBackStack.isNotEmpty()) {
+            tabBackStack.removeAt(tabBackStack.lastIndex)
+        }
+        navigateToTab(target, fromBack = true)
+    }
+    // 안드로이드 하드웨어 뒤로가기: 탭 루트에 있으면 이전 탭/홈으로
+    BackHandler(enabled = true) {
+        goPrevTabOrHome()
+    }
+
     Scaffold(
         containerColor = Color(0xFFF8F8F8),
         bottomBar = {
-            val backStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = backStackEntry?.destination?.route ?: BottomNavItem.BuyCar.route
-
             MocarBottomBarPill(
                 items = items,
-                selectedRoute = currentRoute,
+                selectedRoute = selectedTab,
                 onSelect = { route ->
-                    if (route == currentRoute) {
+                    if (route == selectedTab) {
                         //같은 탭을 다시 클릭한 경우
                         if (route == BottomNavItem.BuyCar.route) {
                             homeScrollSignal++      // home으로 올라가라고 신호
@@ -74,14 +102,10 @@ fun MainScreen(rootNavController: NavHostController) {
                         return@MocarBottomBarPill
                     }
                     if (route == BottomNavItem.Search.route) {
-                        rootNavController.navigate(ROUTE_SEARCH) // ✅ SearchPage로 이동
+                        rootNavController.navigate(ROUTE_SEARCH) // SearchPage로 이동
                         return@MocarBottomBarPill
                     }
-                    navController.navigate(route) {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navigateToTab(route)
                 }
             )
         }
@@ -100,7 +124,8 @@ fun MainScreen(rootNavController: NavHostController) {
             composable(BottomNavItem.Search.route)  {
 //                rootNavController.navigate(ROUTE_SEARCH)
             }
-            composable(BottomNavItem.Chat.route)    { ChatsScreen(navController = rootNavController) }
+            composable(BottomNavItem.Chat.route)    { ChatsScreen(navController = rootNavController,
+                                                                    onBack = { goPrevTabOrHome() }) }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 navController = rootNavController,
                 onWishListClick = {},

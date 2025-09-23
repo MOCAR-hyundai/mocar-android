@@ -28,7 +28,8 @@ import com.autoever.mocar.R
 fun MocarTopBar(
     title: @Composable () -> Unit,
     onBack: (() -> Unit)? = null,
-    onMore: (() -> Unit)? = null
+    onMore: (() -> Unit)? = null,
+    rightContent: (@Composable () -> Unit)? = null
 ) {
     Surface(color = Color.White, shadowElevation = 2.dp) {
         Row(
@@ -40,7 +41,7 @@ fun MocarTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Back 버튼 (옵션)
+            // Back
             if (onBack != null) {
                 IconButton(
                     onClick = onBack,
@@ -57,7 +58,7 @@ fun MocarTopBar(
                 Spacer(Modifier.size(38.dp))
             }
 
-            // 가운데: 타이틀 슬롯 (가운데 정렬)
+            // Title
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -67,36 +68,31 @@ fun MocarTopBar(
                 title()
             }
 
-            // 오른쪽: 더보기 또는 자리 맞춤
-            if (onMore != null) {
-                IconButton(
-                    onClick = onMore,
-                    modifier = Modifier.size(38.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_more),
-                        contentDescription = "더보기",
-                        modifier = Modifier.size(18.dp),
-                        tint = Color.Black
-                    )
+            // Right: 커스텀 슬롯 > onMore > spacer 순
+            when {
+                rightContent != null -> {
+                    Box(
+                        modifier = Modifier.height(38.dp),
+                        contentAlignment = Alignment.Center
+                    ) { rightContent() } // 상태변경 버튼 등 원하는 UI 삽입
                 }
-            } else {
-                Spacer(Modifier.size(38.dp))
+                onMore != null -> {
+                    IconButton(
+                        onClick = onMore,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_more),
+                            contentDescription = "더보기",
+                            modifier = Modifier.size(18.dp),
+                            tint = Color.Black
+                        )
+                    }
+                }
+                else -> {
+                    Spacer(Modifier.size(38.dp))
+                }
             }
         }
     }
-}
-
-/** 텍스트만 쓰고 싶을 때 편의용 래퍼 */
-@Composable
-fun MocarTopBarText(
-    titleText: String,
-    onBack: (() -> Unit)? = null,
-    onMore: (() -> Unit)? = null
-) {
-    MocarTopBar(
-        title = { Text(titleText, style = MaterialTheme.typography.titleMedium) },
-        onBack = onBack,
-        onMore = onMore
-    )
 }

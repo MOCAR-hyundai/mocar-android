@@ -1,6 +1,7 @@
 package com.autoever.mocar.data.listings
 
 import com.autoever.mocar.domain.model.Car
+import com.autoever.mocar.viewmodel.ListingStatus
 
 fun ListingDto.toCar(isFavorite: Boolean): Car = Car(
     id = listingId,
@@ -19,5 +20,7 @@ fun ListingDto.toCar(isFavorite: Boolean): Car = Car(
     isFavorite = isFavorite,
     brandId = "",
     brandName = brand,
-    description = description.ifBlank { null }
+    description = description.ifBlank { null },
+    status = (status?.ifBlank { ListingStatus.ON_SALE } ?: ListingStatus.ON_SALE),
+    sellerId = sellerId ?: ""
 )

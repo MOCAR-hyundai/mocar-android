@@ -139,6 +139,16 @@ class CarDetailViewModel(
             }
         }
     }
+
+    fun changeStatus(newStatus: String) {
+        viewModelScope.launch {
+            try {
+                repo.updateListingStatus(listingId, newStatus)
+            } catch (e: Exception) {
+                // TODO: 에러 로깅이나 Snackbar 알림 등 처리
+            }
+        }
+    }
 }
 
 @Composable
@@ -164,22 +174,41 @@ fun CarDetailRoute(
 
     when {
         state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("로딩 중…") }
-        state.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("오류: ${state.error}") }
+        state.error != null -> Box(
+            Modifier.fillMaxSize(),
+            Alignment.Center
+        ) { Text("오류: ${state.error}") }
+
         car == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("차량을 찾을 수 없어요.") }
-        else -> CarDetailScreen(
-            car = car,
-            seller = seller,
-            price = state.price,
-            onBack = onBack,
-            onToggleFavorite = { vm.toggleFavorite() },
-            onBuyClick = {
-                seller?.id?.let { sellerId ->
-                    vm.openChat(
-                        sellerId = sellerId,
-                        onSuccess = { chatId -> navToChat(chatId) }
+        else -> {
+            // 내가 올린 매물인지 판단
+            val myUid = FirebaseAuth.getInstance().currentUser?.uid
+            // Car에 sellerId가 있으면 함께 비교(없으면 seller만 비교해도 OK)
+            val isOwner = (myUid != null) && (
+                    (seller?.id == myUid) || (car.sellerId == myUid)
                     )
+
+            CarDetailScreen(
+                car = car,
+                seller = seller,
+                price = state.price,
+                isOwner = isOwner,
+                onBack = onBack,
+                onToggleFavorite = { vm.toggleFavorite() },
+                onChangeStatus = { newStatus -> vm.changeStatus(newStatus) },
+                onBuyClick = {
+                    // 판매완료면 내부에서 버튼이 비활성화되므로 보통 안 들어오지만
+                    // 방어적으로 한 번 더 체크해도 됨
+                    if (car.status != ListingStatus.SOLD) {
+                        seller?.id?.let { sellerId ->
+                            vm.openChat(
+                                sellerId = sellerId,
+                                onSuccess = { chatId -> navToChat(chatId) }
+                            )
+                        }
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 }

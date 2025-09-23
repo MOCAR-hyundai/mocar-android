@@ -14,6 +14,7 @@ import com.autoever.mocar.ui.auth.LoginPage
 import com.autoever.mocar.ui.auth.ResetPasswordPage
 import com.autoever.mocar.ui.auth.SignUpPage
 import com.autoever.mocar.ui.chat.ChatRoomScreen
+import com.autoever.mocar.ui.chat.ChatsScreen
 import com.autoever.mocar.ui.home.MainScreen
 import com.autoever.mocar.ui.search.ModelSelect
 import com.autoever.mocar.ui.search.SearchHistoryScreen
@@ -158,10 +159,6 @@ fun MocarNavigation() {
                     navController.navigate("carDetail/$carId")
                 }
             )
-        }
-
-        composable("chats") {
-            com.autoever.mocar.ui.chat.ChatsScreen(navController = navController)
         }
 
         composable(
