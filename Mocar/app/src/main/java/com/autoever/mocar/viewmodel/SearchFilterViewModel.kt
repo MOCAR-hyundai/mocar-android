@@ -1,7 +1,9 @@
 package com.autoever.mocar.viewmodel
 
 import android.app.Application
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -11,11 +13,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.autoever.mocar.data.listings.ListingDto
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import java.time.Instant
+
 data class SearchFilterState(
     val priceRange: ClosedFloatingPointRange<Float> = 0f..100000f,
     val yearRange: ClosedFloatingPointRange<Float> = 1990f..2025f,
@@ -49,6 +54,20 @@ data class SearchRecordItem(
 data class FilterParams(
     val brand: String?,
     val model: String?,
+    val subModels: List<String>,
+    val minPrice: Float,
+    val maxPrice: Float,
+    val minYear: Float,
+    val maxYear: Float,
+    val minMileage: Float,
+    val maxMileage: Float,
+    val types: List<String>,
+    val fuels: List<String>,
+    val regions: List<String>
+)
+
+// 필터 > 검색 결과 필터
+data class ResultFilterParams(
     val subModels: List<String>,
     val minPrice: Float,
     val maxPrice: Float,
@@ -396,5 +415,84 @@ class SearchFilterViewModelFactory(
             return SearchFilterViewModel(application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+// FavoriteDto 정의
+data class FavoriteDto(
+    val userId: String,
+    val listingId: String,
+    val createdAt: String
+)
+
+// 검색 결과 viewmodel
+class SearchResultViewModel : ViewModel() {
+    private val _results = MutableStateFlow<List<ListingDto>>(emptyList())
+    val results: StateFlow<List<ListingDto>> = _results
+
+    // 찜 리스트 관리
+    private val _favorites = MutableStateFlow<List<FavoriteDto>>(emptyList())
+    val favorites: StateFlow<List<FavoriteDto>> = _favorites
+
+    private val db = Firebase.firestore
+    private val collectionName = "favorites"
+
+    // 검색 결과 저장
+    fun setResults(listings: List<ListingDto>) {
+        _results.value = listings
+    }
+
+    // 선택적 초기화
+    fun clearResults() {
+        _results.value = emptyList()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun addFavorite(listing: ListingDto) {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val uid = currentUser.uid
+
+        // 이미 찜되어 있으면 무시
+        if (_favorites.value.any { it.userId == uid && it.listingId == listing.listingId }) return
+
+        val newFavorite = FavoriteDto(
+            userId = uid,
+            listingId = listing.listingId,
+            createdAt = Instant.now().toString()
+        )
+
+        // 로컬 상태 업데이트
+        _favorites.value = _favorites.value + newFavorite
+
+        // Firebase에 저장
+        db.collection(collectionName)
+            .add(newFavorite)
+            .addOnSuccessListener { docRef ->
+                // Firebase 문서 ID를 fid로 저장할 필요가 있으면 여기서 업데이트 가능
+                // 예: _favorites.value = _favorites.value.map { if (it == newFavorite) it.copy(fid = docRef.id) else it }
+            }
+            .addOnFailureListener { e ->
+                // 실패하면 로컬에서 제거
+                _favorites.value = _favorites.value.filterNot { it == newFavorite }
+            }
+    }
+
+    fun removeFavorite(listingId: String) {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val uid = currentUser.uid
+
+        val favorite = _favorites.value.find { it.userId == uid && it.listingId == listingId } ?: return
+
+        // 로컬 상태 업데이트
+        _favorites.value = _favorites.value.filterNot { it == favorite }
+
+        // Firebase에서 삭제
+        db.collection(collectionName)
+            .whereEqualTo("userId", uid)
+            .whereEqualTo("listingId", listingId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                snapshot.documents.forEach { it.reference.delete() }
+            }
     }
 }
