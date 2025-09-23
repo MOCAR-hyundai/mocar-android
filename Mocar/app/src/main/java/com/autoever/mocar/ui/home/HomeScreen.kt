@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,8 +74,16 @@ fun HomeRoute(
     val state by vm.uiState.collectAsState()
 
     when {
-        state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("로딩 중…") }
-        state.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("오류: ${state.error}") }
+        state.loading -> Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) { CircularProgressIndicator() }
+        state.error != null -> Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("오류: ${state.error}", color = Color.Red)
+        }
         else -> HomeScreen(
             navController = navController,
             cars = state.cars,
