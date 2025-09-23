@@ -30,8 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 fun MyPageScreen(
     navController: NavHostController,
-    onWishListClick: () -> Unit,
-    onPurchaseListClick: () -> Unit,
     onRegisterListClick: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
@@ -213,7 +211,9 @@ fun MyPageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onPurchaseListClick() }
+                    .clickable {
+                        navController.navigate("buy_list")
+                    }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -427,16 +427,4 @@ fun MyPageScreen(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MyPageScreenPreview() {
-    MyPageScreen(
-        navController = rememberNavController(),
-        onWishListClick = {},
-        onPurchaseListClick = {},
-        onRegisterListClick = {},
-        onSettingsClick = {},
-    )
 }

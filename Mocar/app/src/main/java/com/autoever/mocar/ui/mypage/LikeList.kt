@@ -26,13 +26,14 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.Timestamp
 
 // Like 데이터 모델
 data class LikeItem(
     val fid: String = "",
     val userId: String = "",
     val listingId: String = "",
-    val createdAt: String = ""
+    val createdAt: Timestamp? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
