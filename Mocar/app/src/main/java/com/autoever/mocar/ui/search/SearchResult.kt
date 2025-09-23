@@ -61,7 +61,7 @@ fun SearchResultPage(
             ResultFilterParams(
                 subModels = emptyList(),
                 minPrice = 0f,
-                maxPrice = 20000000f, // 단위: 원
+                maxPrice = 80000000f, // 단위: 원
                 minYear = 2000f,
                 maxYear = 2025f,
                 minMileage = 0f,
@@ -209,30 +209,31 @@ fun FilterRowSection(
 
     // 가격 모달
     if (showPriceDialog) {
+        // 100만원 단위 이동: (전체Max-전체Min)/(100) - 1
+        val priceSteps = ((filter.maxPrice / 10_000f) / 100f).toInt() - 1
+
         FilterRangeModal(
             title = "가격",
             unit = "만원",
-            valueRange = 500f..5000f,
-            steps = (5000 - 500) / 100 - 1,
-            currentMin = minPrice.toFloat(),
-            currentMax = maxPrice.toFloat(),
+            valueRange = 0f..80000000f / 10_000f,
+            steps = priceSteps,
+            currentMin = minPrice / 10_000f,
+            currentMax = maxPrice / 10_000f,
             onDismiss = { showPriceDialog = false },
-            onApply = { min, max ->
-                minPrice = min * 10000f  // 만원 → 원 변환
-                maxPrice = max * 10000f
+            onApply = { minMan, maxMan ->
+                minPrice = minMan * 10_000f
+                maxPrice = if (maxMan * 10_000f >= 80_000_000f) Float.MAX_VALUE else maxMan * 10_000f
                 showPriceDialog = false
-                onFilterChange(
-                    filter.copy(
-                        minPrice = minPrice,
-                        maxPrice = maxPrice,
-                        minYear = minYear,
-                        maxYear = maxYear,
-                        minMileage = minMileage,
-                        maxMileage = maxMileage,
-                        fuels = if (selectedFuelType == "전체") emptyList() else listOf(selectedFuelType),
-                        regions = if (selectedRegion == "전체") emptyList() else listOf(selectedRegion)
-                    )
-                )
+                onFilterChange(filter.copy(
+                    minPrice = minPrice,
+                    maxPrice = maxPrice,
+                    minYear = minYear,
+                    maxYear = maxYear,
+                    minMileage = minMileage,
+                    maxMileage = maxMileage,
+                    fuels = if (selectedFuelType=="전체") emptyList() else listOf(selectedFuelType),
+                    regions = if (selectedRegion=="전체") emptyList() else listOf(selectedRegion)
+                ))
             }
         )
     }
@@ -243,13 +244,13 @@ fun FilterRowSection(
             title = "연식",
             unit = "년",
             valueRange = 2000f..2025f,
-            steps = 2025 - 2000 - 1,
-            currentMin = minYear.toFloat(),
-            currentMax = maxYear.toFloat(),
+            steps = (2025 - 2000).toInt() - 1,
+            currentMin = minYear,
+            currentMax = maxYear,
             onDismiss = { showYearDialog = false },
-            onApply = { min, max ->
-                minPrice = min * 10000f  // 만원 → 원 변환
-                maxPrice = max * 10000f
+            onApply = { minYearValue, maxYearValue ->
+                minYear = minYearValue.toFloat()
+                maxYear = maxYearValue.toFloat()
                 showYearDialog = false
                 onFilterChange(
                     filter.copy(
@@ -269,17 +270,18 @@ fun FilterRowSection(
 
     // 주행거리 모달
     if (showMileageDialog) {
+        val steps = (300_000f / 10_000f).toInt() - 1
         FilterRangeModal(
             title = "주행거리",
             unit = "km",
-            valueRange = 0f..100000f,
-            steps = 100,
-            currentMin = minMileage.toFloat(),
-            currentMax = maxMileage.toFloat(),
+            valueRange = 0f..300_000f,
+            steps = steps,
+            currentMin = minMileage,
+            currentMax = if (maxMileage >= 300_000f) 300_000f else maxMileage,
             onDismiss = { showMileageDialog = false },
             onApply = { min, max ->
-                minPrice = min * 10000f  // 만원 → 원 변환
-                maxPrice = max * 10000f
+                minMileage = min.toFloat()
+                maxMileage = if (max >= 300_000f) Float.MAX_VALUE else max.toFloat()
                 showMileageDialog = false
                 onFilterChange(
                     filter.copy(
