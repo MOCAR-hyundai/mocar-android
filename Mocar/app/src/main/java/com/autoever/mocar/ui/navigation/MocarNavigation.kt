@@ -4,6 +4,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -25,6 +26,7 @@ import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModelFactory
 import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
+import com.autoever.mocar.viewmodel.SearchResultViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 // ----- Routes -----
@@ -44,6 +46,7 @@ fun MocarNavigation() {
     )
     val manufacturerViewModel: SearchManufacturerViewModel = viewModel()
     val listingViewModel: ListingViewModel = viewModel()
+    val searchResultViewModel: SearchResultViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -61,6 +64,7 @@ fun MocarNavigation() {
                 searchManufacturerViewModel = searchManufacturerViewModel,
                 searchFilterViewModel = searchFilterViewModel,
                 listingViewModel = listingViewModel,
+                searchResultViewModel = searchResultViewModel,
                 onBack = {
                     navController.popBackStack()
                 }
@@ -126,6 +130,14 @@ fun MocarNavigation() {
                 modelName = model,
                 allListings = listings,
                 searchManufacturerViewModel = searchManufacturerViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("result") {
+            SearchResultPage(
+                navController = navController,
+                searchResultViewModel = searchResultViewModel,
                 onBack = { navController.popBackStack() }
             )
         }

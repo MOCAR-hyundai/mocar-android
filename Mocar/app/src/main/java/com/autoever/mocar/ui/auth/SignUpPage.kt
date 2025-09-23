@@ -40,7 +40,10 @@ import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.platform.LocalContext
+import com.autoever.mocar.ui.common.component.molecules.ToastMessage
+import com.google.firebase.auth.FirebaseAuthException
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -56,11 +59,16 @@ fun SignUpPage(navController: NavHostController) {
     val passwordVisible = remember { mutableStateOf(false) }
     val passwordCheckVisible = remember { mutableStateOf(false) }
 
+    var emailError by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf("") }
+    var passwordCheckError by remember { mutableStateOf("") }
+    var nameError by remember { mutableStateOf("") }
+    var birthdayError by remember { mutableStateOf("") }
+
     val context = LocalContext.current
     val calendar = remember { Calendar.getInstance() }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.KOREA) }
     // 달력 클릭 시 DatePickerDialog 표시
-
     val datePickerDialog = remember {
         DatePickerDialog(
             context,
@@ -74,6 +82,23 @@ fun SignUpPage(navController: NavHostController) {
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         )
+    }
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    val isFormValid by remember(email, password, passwordCheck, name, birthday,
+        emailError, passwordError, passwordCheckError, nameError, birthdayError) {
+        derivedStateOf {
+            emailError.isEmpty()
+                    && passwordError.isEmpty()
+                    && passwordCheckError.isEmpty()
+                    && nameError.isEmpty()
+                    && birthdayError.isEmpty()
+                    && email.isNotBlank()
+                    && password.isNotBlank()
+                    && passwordCheck.isNotBlank()
+                    && name.isNotBlank()
+                    && birthday.replace("-", "").length == 8
+        }
     }
 
     Scaffold(
@@ -110,8 +135,8 @@ fun SignUpPage(navController: NavHostController) {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(20.dp))
+
             Text(
                 text = "이메일",
                 modifier = Modifier
@@ -122,7 +147,9 @@ fun SignUpPage(navController: NavHostController) {
             // 이메일 입력
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it
+                    emailError = if (Patterns.EMAIL_ADDRESS.matcher(it).matches()) "" else "유효한 이메일 형식이 아닙니다."
+                                },
                 placeholder = { Text("abc@example.com") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -130,8 +157,30 @@ fun SignUpPage(navController: NavHostController) {
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF3058EF),
                     unfocusedBorderColor = Color.Gray
-                )
+                ),
+                trailingIcon = {
+                    if (email.isNotEmpty()) {
+                        IconButton(onClick = { email = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "지우기",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
             )
+            if (emailError.isNotEmpty()) {
+                Text(
+                    text = emailError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, start = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -145,7 +194,10 @@ fun SignUpPage(navController: NavHostController) {
             // 비밀번호 입력
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    passwordError = if (it.length >= 8) "" else "비밀번호는 최소 8자 이상이어야 합니다."
+                                },
                 placeholder = { Text("비밀번호") },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if(passwordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
@@ -170,6 +222,16 @@ fun SignUpPage(navController: NavHostController) {
                     unfocusedBorderColor = Color.Gray
                 )
             )
+            if (passwordError.isNotEmpty()) {
+                Text(
+                    text = passwordError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, start = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -182,7 +244,10 @@ fun SignUpPage(navController: NavHostController) {
             )
             OutlinedTextField(
                 value = passwordCheck,
-                onValueChange = { passwordCheck = it },
+                onValueChange = {
+                    passwordCheck = it
+                    passwordCheckError = if (password == it) "" else "비밀번호가 일치하지 않습니다."
+                                },
                 placeholder = { Text("비밀번호 확인") },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if(passwordCheckVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
@@ -207,6 +272,16 @@ fun SignUpPage(navController: NavHostController) {
                     unfocusedBorderColor = Color.Gray
                 )
             )
+            if (passwordCheckError.isNotEmpty()) {
+                Text(
+                    text = passwordCheckError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, start = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -220,8 +295,22 @@ fun SignUpPage(navController: NavHostController) {
             OutlinedTextField(
                 value = birthday,
                 onValueChange = {
-                    if (it.matches(Regex("^\\d{0,4}-?\\d{0,2}-?\\d{0,2}$"))) {
-                        birthday = it
+                    val digits = it.filter { char -> char.isDigit() } // 숫자만 추출
+
+                    if (digits.length <= 8) {
+                        birthday = digits
+
+                        // 8자리 입력된 경우에만 하이픈 포맷 적용
+                        if (digits.length == 8) {
+                            birthday = "${digits.substring(0, 4)}-${
+                                digits.substring(
+                                    4,
+                                    6
+                                )
+                            }-${digits.substring(6)}"
+                        }
+
+                        birthdayError = if (digits.length == 8) "" else "생년월일은 8자리여야 합니다."
                     }
                 },
                 placeholder = { Text("YYYY-MM-DD") },
@@ -235,12 +324,34 @@ fun SignUpPage(navController: NavHostController) {
                         )
                     }
                 },
+                trailingIcon = {
+                    if (birthday.isNotEmpty()) {
+                        IconButton(onClick = { birthday = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "지우기",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF3058EF),
                     unfocusedBorderColor = Color.Gray
                 ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
+            if (birthdayError.isNotEmpty()) {
+                Text(
+                    text = birthdayError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, start = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -253,38 +364,60 @@ fun SignUpPage(navController: NavHostController) {
             )
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = it
+                    nameError = if (name.isBlank()) "이름을 입력해주세요." else ""
+                                },
                 placeholder = { Text("이름") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), // ← 모서리 둥글게
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF3058EF),
                     unfocusedBorderColor = Color.Gray
-                )
+                ),
+                trailingIcon = {
+                    if (name.isNotEmpty()) {
+                        IconButton(onClick = { name = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "지우기",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
             )
+            if (nameError.isNotEmpty()) {
+                Text(
+                    text = nameError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, start = 4.dp)
+                )
+            }
+            if (toastMessage != null) {
+                ToastMessage(
+                    message = toastMessage!!,
+                    onDismiss = { toastMessage = null },
+                    modifier = Modifier.padding(top = 20.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            } else {
+                Spacer(modifier = Modifier.height(80.dp))
+            }
 
-            Spacer(modifier = Modifier.height(60.dp))
-
-            // 버튼 (동작 없음)
             Button(
                 onClick = {
                     // 1. 이메일 형식 검증
-                    if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                        Toast.makeText(context, "유효한 이메일 형식이 아닙니다.", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
+                    if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) return@Button
 
                     // 2. 비밀번호 일치 확인
-                    if (password != passwordCheck) {
-                        Toast.makeText(context, "비밀번호가 일치하지 않습니다.", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
+                    if (password != passwordCheck) return@Button
 
                     // 3. 비밀번호 최소 길이 확인
-                    if (password.length < 8) {
-                        Toast.makeText(context, "비밀번호는 최소 8자 이상이어야 합니다.", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
+                    if (password.length < 8) return@Button
 
                     val auth = FirebaseAuth.getInstance()
                     val db = FirebaseFirestore.getInstance()
@@ -313,11 +446,16 @@ fun SignUpPage(navController: NavHostController) {
                                     }
                                     .addOnFailureListener {
                                         // Firestore 저장 실패 처리
-                                        Toast.makeText(context, "회원정보 저장에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                                        toastMessage = "회원정보 저장에 실패했습니다."
                                     }
                             } else {
                                 // Firebase Auth 실패 처리
-                                Toast.makeText(context, "회원가입에 실패했습니다: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                                val exception = task.exception
+                                if (exception is FirebaseAuthException && exception.errorCode == "ERROR_EMAIL_ALREADY_IN_USE") {
+                                    toastMessage = "이미 가입된 이메일입니다."
+                                } else {
+                                    toastMessage = "회원가입에 실패했습니다."
+                                }
                             }
                         }
                 },
@@ -328,6 +466,7 @@ fun SignUpPage(navController: NavHostController) {
                     containerColor = Color.Black,   // 버튼 배경색
                     contentColor = Color.White     // 텍스트 색상
                 ),
+                enabled = isFormValid,
             ) {
                 Text(
                     text = "회원가입",
