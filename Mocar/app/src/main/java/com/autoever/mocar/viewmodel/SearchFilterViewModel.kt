@@ -398,3 +398,19 @@ class SearchFilterViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+// 검색 결과 viewmodel
+class SearchResultViewModel : ViewModel() {
+    private val _results = MutableStateFlow<List<ListingDto>>(emptyList())
+    val results: StateFlow<List<ListingDto>> = _results
+
+    // 검색 결과 저장
+    fun setResults(listings: List<ListingDto>) {
+        _results.value = listings
+    }
+
+    // 선택적 초기화
+    fun clearResults() {
+        _results.value = emptyList()
+    }
+}
