@@ -1,4 +1,6 @@
 import android.app.Application
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,6 +18,7 @@ import com.autoever.mocar.ui.auth.SignUpPage
 import com.autoever.mocar.ui.chat.ChatRoomScreen
 import com.autoever.mocar.ui.chat.ChatsScreen
 import com.autoever.mocar.ui.home.MainScreen
+import com.autoever.mocar.ui.mypage.BuyListScreen
 import com.autoever.mocar.ui.search.ModelSelect
 import com.autoever.mocar.ui.search.SearchHistoryScreen
 import com.autoever.mocar.ui.search.SearchPage
@@ -36,6 +39,7 @@ const val ROUTE_CAR_DETAIL = "carDetail"
 const val ROUTE_SEARCH = "search"
 fun carDetailRoute(carId: String) = "$ROUTE_CAR_DETAIL/$carId"
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MocarNavigation() {
     val navController = rememberNavController()
@@ -154,6 +158,15 @@ fun MocarNavigation() {
 
         composable("like_list") {
             LikeListScreen(
+                navController = navController,
+                onCarClick = { carId ->
+                    navController.navigate("carDetail/$carId")
+                }
+            )
+        }
+
+        composable("buy_list") {
+            BuyListScreen(
                 navController = navController,
                 onCarClick = { carId ->
                     navController.navigate("carDetail/$carId")
