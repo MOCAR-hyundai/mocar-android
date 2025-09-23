@@ -60,6 +60,7 @@ import com.autoever.mocar.viewmodel.SearchBarViewModel
 import com.autoever.mocar.viewmodel.SearchFilterState
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
 import com.autoever.mocar.viewmodel.SearchManufacturerViewModel
+import com.autoever.mocar.viewmodel.SearchResultViewModel
 import com.autoever.mocar.viewmodel.SearchUiState
 import com.google.firebase.auth.FirebaseAuth
 import kotlin.collections.filter
@@ -71,6 +72,7 @@ fun SearchPage(
     searchManufacturerViewModel: SearchManufacturerViewModel,
     searchFilterViewModel: SearchFilterViewModel,
     listingViewModel: ListingViewModel,
+    searchResultViewModel: SearchResultViewModel, // 그냥 타입만
     onBack: () -> Unit,
 ) {
     var selectedMenu by remember { mutableStateOf("제조사") }
@@ -127,17 +129,28 @@ fun SearchPage(
         }
     }
 
+    // 검색 결과 저장할 viewmodel
+    val filteredListings = getFilteredListings(
+        allListings = listings,
+        filter = state,
+        brand = searchManufacturerViewModel.selectedBrand,
+        model = searchManufacturerViewModel.selectedModel,
+        subModels = searchManufacturerViewModel.selectedSubModels
+    )
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             if (!isSearchActive) {
                 BottomButtons(
+                    navController = navController,
                     userId = userId,
                     searchFilterViewModel = searchFilterViewModel,
                     searchManufacturerViewModel = searchManufacturerViewModel,
                     totalFilteredCount = totalFilteredCount,
+                    searchResultViewModel = searchResultViewModel,
                     listings = listings,
-                    searchBarViewModel = searchBarViewModel
+                    filteredListings = filteredListings
                 )
             }
         }
@@ -396,12 +409,15 @@ fun LeftMenu(selected: String,
 // 초기화 및 선택 버튼
 @Composable
 fun BottomButtons(
+    navController: NavController,
     userId: String,
     searchFilterViewModel: SearchFilterViewModel,
     searchManufacturerViewModel: SearchManufacturerViewModel,
     totalFilteredCount: Int,
+    searchResultViewModel: SearchResultViewModel,
     listings: List<ListingDto>,
-    searchBarViewModel: SearchBarViewModel
+    filteredListings: List<ListingDto>   // <- 추가
+
 ) {
     val state by searchFilterViewModel.filterState.collectAsState()
 
@@ -441,6 +457,8 @@ fun BottomButtons(
                     subModels = searchManufacturerViewModel.selectedSubModels,
                     filterState = searchFilterViewModel.filterState.value
                 )
+
+                searchResultViewModel.setResults(filteredListings)
 
                 // 검색 결과 페이지로 이동
                 navController.navigate("result")
