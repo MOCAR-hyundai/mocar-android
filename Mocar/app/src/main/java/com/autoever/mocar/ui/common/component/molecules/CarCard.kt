@@ -97,7 +97,7 @@ fun CarCard(
                         AsyncImage(
                             model = car.imageUrl,
                             contentDescription = car.title,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.width(375.dp),
                             contentScale = ContentScale.Crop
                         )
                     }
