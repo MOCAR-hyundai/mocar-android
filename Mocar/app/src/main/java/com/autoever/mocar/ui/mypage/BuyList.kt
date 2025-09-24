@@ -1,28 +1,19 @@
 package com.autoever.mocar.ui.mypage
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -30,7 +21,8 @@ import coil.compose.AsyncImage
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.listings.toCar
-import com.autoever.mocar.ui.common.component.molecules.CarGrid
+import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
+import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.autoever.mocar.ui.common.util.formatKrwPretty
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -39,8 +31,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
-import java.text.NumberFormat
-import java.util.Locale
 
 // order 데이터 모델
 data class Order(
@@ -54,7 +44,6 @@ data class Order(
     val soldAt: String? = null
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BuyListScreen(
     navController: NavHostController,
@@ -70,7 +59,18 @@ fun BuyListScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Firebase에서 찜 목록 가져오기
+    // Firebase에서 구매 목록 가져오기
+    var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(user?.uid) {
+        if (user == null) return@LaunchedEffect
+        db.collection("favorites")
+            .whereEqualTo("userId", user.uid)
+            .addSnapshotListener { snap, _ ->
+                favoriteIds = snap?.documents
+                    ?.mapNotNull { it.getString("listingId") }
+                    ?.toSet() ?: emptySet()
+            }
+    }
     LaunchedEffect(user?.uid) {
         if (user == null) {
             errorMessage = "로그인이 필요합니다"
@@ -99,7 +99,7 @@ fun BuyListScreen(
                         async {
                             try {
                                 val doc = db.collection("listings").document(id).get().await()
-                                doc.toObject(ListingDto::class.java)?.toCar(isFavorite = true)
+                                doc.toObject(ListingDto::class.java)?.toCar()
                             } catch (_: Exception) {
                                 null
                             }
@@ -118,13 +118,9 @@ fun BuyListScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text("구입 내역") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                }
+            MocarTopBar(
+                title = { Text("나의 구입 매물") },
+                onBack = { navController.popBackStack() },
             )
         }
     ) { paddingValues ->
@@ -153,8 +149,6 @@ fun BuyListScreen(
                 }
 
                 else -> {
-                    // Car → CarUi 매핑 후 2열 Grid로 표시
-                    val carUis = boughtCars.map { it.toCarUi() }
                     val ordersMap = orderItems.associateBy { it.listingId }
 
                     LazyColumn(
@@ -234,7 +228,7 @@ fun CarCardWithStatus(
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                         "sold" -> Text(
-                            text = "판매일: ${it.soldAt?.toKoreanDateFormat() ?: "-"}",
+                            text = "구입일: ${it.soldAt?.toKoreanDateFormat() ?: "-"}",
                             color = Color(0xFF4CAF50),
                             fontSize = 12.sp,
                             modifier = Modifier.padding(bottom = 4.dp)
@@ -261,15 +255,3 @@ private fun String.toKoreanDateFormat(): String {
     val day = substring(8, 10)
     return "${year}년 ${month}월 ${day}일"
 }
-
-/* ---------------- 확장함수: Car → CarUi ---------------- */
-private fun Car.toCarUi() = com.autoever.mocar.ui.common.component.molecules.CarUi(
-    id = id,
-    title = title,
-    imageUrl = imageUrl,
-    imageRes = null,
-    mileageKm = mileageKm,
-    region = region,
-    priceKRW = priceKRW,
-    isFavorite = isFavorite
-)

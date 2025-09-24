@@ -70,7 +70,6 @@ import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.autoever.mocar.ui.common.component.molecules.FavoriteCarousel
 import com.autoever.mocar.viewmodel.HomeViewModel
 
-
 @Composable
 fun HomeRoute(
     navController: NavController,
@@ -153,11 +152,10 @@ fun HomeScreen(
         item { SectionHeader("찜한 목록", "Available", "View All") }
         item {
             FavoriteCarousel(
-                cars = cars.itemSnapshotList.items.filterNotNull()
+                cars = cars
                     .filter { favorites.contains(it.id) }
                     .map { it.toUi() },
-                onToggleFav = { c -> onToggleFavorite(c.id) },
-                onCardClick = { car -> navController.navigate(carDetailRoute(car.id)) }
+                navController = navController,
             )
         }
 
@@ -202,9 +200,10 @@ fun HomeScreen(
         // 차량 카드 2열 그리드
         item {
             CarGrid(
-                cars = filtered.map { it.toUi() },
-                onFavoriteToggle = { carId -> onToggleFavorite(carId) },
-                onCardClick = { carId -> navController.navigate(carDetailRoute(carId)) }
+                navController = navController,
+                cars = filtered.map { car ->
+                    car.toUi()
+                },
             )
         }
 

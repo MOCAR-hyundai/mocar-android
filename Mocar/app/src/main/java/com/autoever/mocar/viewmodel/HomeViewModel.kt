@@ -24,6 +24,14 @@ class HomeViewModel(
 ) : ViewModel() {
     private val uid: String? get() = auth.currentUser?.uid
 
+    /** Auth 상태를 Flow로 (로그인/로그아웃/계정전환 대응) */
+    private val userIdFlow: Flow<String?> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { fb -> trySend(fb.currentUser?.uid) }
+        auth.addAuthStateListener(listener)
+        trySend(auth.currentUser?.uid) // 초기값
+        awaitClose { auth.removeAuthStateListener(listener) }
+    }.distinctUntilChanged()
+
     // 선택된 브랜드 ID
     private val _selectedBrandId = MutableStateFlow<String?>(null)
     fun selectBrand(id: String?) { _selectedBrandId.value = id }
@@ -31,11 +39,24 @@ class HomeViewModel(
     // 즐겨찾기 목록
     val favoritesFlow: Flow<Set<String>> =
         uid?.let { repo.myFavoriteListingIds(it) } ?: flowOf(emptySet())
+    /** 내 즐겨찾기 listingId 집합 */
+    private val favoritesFlow: Flow<Set<String>> =
+        userIdFlow.flatMapLatest { uid ->
+            if (uid.isNullOrBlank()) flowOf(emptySet()) else repo.myFavoriteListingIds(uid)
+        }.catch { emit(emptySet()) }
 
     // 브랜드 목록
     val brandsFlow: Flow<List<BrandUi>> =
+    /** UI에서 바로 구독할 수 있도록 StateFlow로 공개 */
+    val favoriteIds: StateFlow<Set<String>> =
+        favoritesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** 3) 매물/브랜드 */
+    private val listingsFlow = repo.listingsOnSale()
+    private val brandsFlow: Flow<List<BrandUi>> =
         repo.brands()
             .map { it.map { dto -> dto.toUi() } }
+            .map { it.map { b -> b.toUi() } }
             .catch { emit(emptyList()) }
 
     // id → name 매핑 활용해서 brandName 추출
@@ -50,6 +71,14 @@ class HomeViewModel(
                 brandsMap.clear()
                 list.forEach { dto -> brandsMap[dto.id] = dto.name }
             }
+    /** 화면 상태 */
+    val uiState: StateFlow<HomeUiState> =
+        combine(listingsFlow, brandsFlow) { listings, brandUis ->
+            HomeUiState(
+                cars = listings.map { it.toCar() },
+                brands = brandUis,
+                loading = false
+            )
         }
     }
 
@@ -62,9 +91,18 @@ class HomeViewModel(
                     .map { paging -> paging.map { dto -> dto.toCar(isFavorite = false) } }
             }
             .cachedIn(viewModelScope)
+            .catch { e -> emit(HomeUiState(error = e.message ?: "Unknown error", loading = false)) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
+    /** 5) 토글 (미로그인 시 무시) */
     fun toggleFavorite(listingId: String) {
-        val u = uid ?: return
-        viewModelScope.launch { repo.toggleFavorite(u, listingId) }
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                repo.toggleFavorite(uid, listingId)  // 레포에서 `${uid}_${listingId}` 문서 생성/삭제 + createdAt(String) 저장
+            } catch (t: Throwable) {
+                // TODO: 스낵바/에러 상태 처리
+            }
+        }
     }
 }

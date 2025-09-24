@@ -129,8 +129,6 @@ fun MainScreen(rootNavController: NavHostController) {
                                                                     onBack = { goPrevTabOrHome() }) }
             composable(BottomNavItem.MyPage.route)  { MyPageScreen(
                 navController = rootNavController,
-                onRegisterListClick = {},
-                onSettingsClick = {},
             ) }
         }
     }
