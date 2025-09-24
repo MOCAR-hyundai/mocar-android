@@ -54,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import carDetailRoute
 import com.autoever.mocar.R
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.ui.common.component.atoms.BrandChip
@@ -90,7 +89,6 @@ fun HomeRoute(
             cars = state.cars,
             brands = state.brands,
             favorites = favorites,
-            onToggleFavorite = { vm.toggleFavorite(it) },
             scrollSignal = scrollSignal
         )
     }
@@ -103,7 +101,6 @@ fun HomeScreen(
     cars: List<Car>,
     brands: List<BrandUi>,
     favorites: Set<String>,
-    onToggleFavorite: (String) -> Unit,
     scrollSignal: Int
 ) {
     val gutter = 22.dp
@@ -156,11 +153,10 @@ fun HomeScreen(
         item { SectionHeader("찜한 목록", "Available", "View All") }
         item {
             FavoriteCarousel(
+                navController = navController,
                 cars = cars
                     .filter { favorites.contains(it.id) }
                     .map { it.toUi() },
-                onToggleFav = { c -> onToggleFavorite(c.id) },
-                onCardClick   = { car -> navController.navigate(carDetailRoute(car.id)) }
             )
         }
 
@@ -206,11 +202,10 @@ fun HomeScreen(
         // 차량 카드 2열 그리드
         item {
             CarGrid(
+                navController = navController,
                 cars = filtered.map { car ->
                     car.toUi()
                 },
-                onFavoriteToggle = { carId -> onToggleFavorite(carId) },
-                onCardClick = { carId -> navController.navigate(carDetailRoute(carId)) }
             )
         }
     }
