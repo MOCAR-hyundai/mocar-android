@@ -53,77 +53,80 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.items
 import carDetailRoute
 import com.autoever.mocar.R
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.ui.common.component.atoms.BrandChip
 import com.autoever.mocar.ui.common.component.atoms.BrandUi
+import com.autoever.mocar.ui.common.component.molecules.CarCard
 import com.autoever.mocar.ui.common.component.molecules.CarGrid
 import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.autoever.mocar.ui.common.component.molecules.FavoriteCarousel
 import com.autoever.mocar.viewmodel.HomeViewModel
 
+
 @Composable
 fun HomeRoute(
     navController: NavController,
     scrollSignal: Int,
-    vm: HomeViewModel =
-        androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    val state by vm.uiState.collectAsState()
+    val vm: HomeViewModel = viewModel()
+    val carItems = vm.carPagingFlow.collectAsLazyPagingItems()
+    val brands by vm.brandsFlow.collectAsState(initial = emptyList())
+    val favorites by vm.favoritesFlow.collectAsState(initial = emptySet())
 
-    when {
-        state.loading -> Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) { CircularProgressIndicator() }
-        state.error != null -> Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("오류: ${state.error}", color = Color.Red)
-        }
-        else -> HomeScreen(
-            navController = navController,
-            cars = state.cars,
-            brands = state.brands,
-            onToggleFavorite = { vm.toggleFavorite(it) },
-            scrollSignal = scrollSignal
-        )
-    }
+    // 로딩 상태 판단
+    val isLoading = carItems.loadState.refresh is LoadState.Loading
+
+    HomeScreen(
+        navController = navController,
+        brands = brands, // 브랜드 리스트
+        cars = carItems,
+        onToggleFavorite = { carId -> vm.toggleFavorite(carId) },
+        onBrandSelected = { vm.selectBrand(it) }, // 브랜드 선택시
+        isLoading = isLoading,
+        scrollSignal = scrollSignal,
+    )
 }
 
-// ---------------- 홈스크린 ----------------
 @Composable
 fun HomeScreen(
     navController: NavController,
-    cars: List<Car>,
     brands: List<BrandUi>,
+    cars: LazyPagingItems<Car>,
+    favorites: Set<String> = emptySet(),
     onToggleFavorite: (String) -> Unit,
+    onBrandSelected: (String?) -> Unit,
+    isLoading: Boolean,
     scrollSignal: Int
 ) {
-    val gutter = 22.dp
     var selectedBrandId by remember { mutableStateOf<String?>(null) }
-
     val selectedBrandName = remember(selectedBrandId, brands) {
         brands.firstOrNull { it.id == selectedBrandId }?.name
     }
 
     val listState = rememberLazyListState()
 
-    // 🔹 시그널 값이 바뀔 때마다 맨 위로 스크롤
+    // 시그널 값이 바뀔 때마다 맨 위로 스크롤
     LaunchedEffect(scrollSignal) {
         if (scrollSignal > 0) {
             listState.animateScrollToItem(0)
         }
     }
 
-    val filtered = remember(selectedBrandName, cars) {
+    // LazyPagingItems에서 현재 로드된 항목들을 가져와서 필터링
+    val filtered = remember(selectedBrandName, cars.itemSnapshotList) {
+        val currentItems = cars.itemSnapshotList.items.filterNotNull()
         if (selectedBrandName.isNullOrBlank()) {
-            cars
+            currentItems
         } else {
-            cars.filter { it.brandName.equals(selectedBrandName, ignoreCase = true) }
+            currentItems.filter { it.brandName.equals(selectedBrandName, ignoreCase = true) }
         }
     }
 
@@ -132,10 +135,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8F8F8)),
-        contentPadding = PaddingValues(
-            start = gutter, end = gutter,
-            top = 16.dp, bottom = 20.dp
-        ),
+        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // 상단 로고/알림
@@ -153,30 +153,31 @@ fun HomeScreen(
         item { SectionHeader("찜한 목록", "Available", "View All") }
         item {
             FavoriteCarousel(
-                cars = cars.filter { it.isFavorite }.map { it.toUi() },
+                cars = cars.itemSnapshotList.items.filterNotNull()
+                    .filter { favorites.contains(it.id) }
+                    .map { it.toUi() },
                 onToggleFav = { c -> onToggleFavorite(c.id) },
                 onCardClick = { car -> navController.navigate(carDetailRoute(car.id)) }
             )
         }
 
-      //브랜드 선택
+        //브랜드 선택
         item {
             Text("Brands", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(brands, key = { it.id }) { brand ->
-                    Box(
-                        modifier = Modifier.width(80.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.width(80.dp), contentAlignment = Alignment.Center) {
                         BrandChip(
                             brand = brand,
                             selected = selectedBrandId == brand.id,
                             onClick = {
-                                selectedBrandId =
-                                    if (selectedBrandId == brand.id) null else brand.id
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                                selectedBrandId = if (selectedBrandId == brand.id) null else brand.id
+                                onBrandSelected(        // ← 여기서 id가 아닌 name 전달
+                                    if (selectedBrandId == brand.id) null
+                                    else brand.name
+                                )
+                            }
                         )
                     }
                 }
@@ -205,6 +206,15 @@ fun HomeScreen(
                 onFavoriteToggle = { carId -> onToggleFavorite(carId) },
                 onCardClick = { carId -> navController.navigate(carDetailRoute(carId)) }
             )
+        }
+
+        // 로딩 상태
+        if (isLoading) {
+            item {
+                Box(Modifier.fillMaxWidth(), Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 }
@@ -332,14 +342,3 @@ private fun SectionHeader(
         }
     }
 }
-
-/* ---------------- 가격 포맷터 ---------------- */
-//fun formatKrwPretty(amount: Long): String {
-//    val eok = amount / 100_000_000
-//    val man = (amount % 100_000_000) / 10_000
-//    return when {
-//        eok > 0L && man > 0L -> "${eok}억 ${String.format("%,d만원", man)}"
-//        eok > 0L && man == 0L -> "${eok}억"
-//        else -> String.format("%,d만원", man)
-//    }
-//}

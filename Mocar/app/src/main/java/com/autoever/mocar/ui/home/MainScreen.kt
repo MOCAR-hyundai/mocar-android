@@ -116,8 +116,9 @@ fun MainScreen(rootNavController: NavHostController) {
             modifier = Modifier.padding(inner)
         ) {
             composable(BottomNavItem.BuyCar.route)  {
-                HomeRoute(navController = rootNavController,
-                        scrollSignal = homeScrollSignal
+                HomeRoute(
+                    navController = rootNavController,
+                    scrollSignal = homeScrollSignal
                 )
             }
             composable(BottomNavItem.SellCar.route) { SellCarScreen() }

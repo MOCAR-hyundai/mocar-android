@@ -1,5 +1,10 @@
 package com.autoever.mocar.repository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.autoever.mocar.data.brands.BrandDto
 import com.autoever.mocar.data.chats.ChatRoomDto
 import com.autoever.mocar.data.chats.MessageDto
@@ -14,6 +19,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -21,14 +27,31 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.max
-import kotlin.math.min
 
 class FirebaseMocarRepository(
     private val db: FirebaseFirestore
 ) : MocarRepository {
 
     private val listings = db.collection("listings")
+
+    // 페이징 메서드
+    override fun listingsOnSalePaged(pageSize: Int): Flow<PagingData<ListingDto>> {
+        return Pager(
+            PagingConfig(pageSize, enablePlaceholders = false),
+            pagingSourceFactory = { ListingPagingSource(db, pageSize) }
+        ).flow
+    }
+
+    // 브랜드별 페이징 메서드
+    override fun listingsOnSalePagedByBrand(
+        pageSize: Int,
+        brandId: String?
+    ): Flow<PagingData<ListingDto>> {
+        return Pager(
+            config = PagingConfig(pageSize, enablePlaceholders = false),
+            pagingSourceFactory = { ListingPagingSource(db, pageSize, brandId) }
+        ).flow
+    }
 
     override fun listingsOnSale(): Flow<List<ListingDto>> = callbackFlow {
         val reg = db.collection("listings")
@@ -206,14 +229,14 @@ class FirebaseMocarRepository(
             val title = listing.getString("title") ?: ""
             ref.set(
                 ChatRoomDto(
-                chatId = chatId,
-                listingId = listingId,
-                listingTitle = title,
-                buyerId = buyerId,
-                sellerId = sellerId,
-                lastMessage = "",
-                lastAt = Timestamp.now()
-            )
+                    chatId = chatId,
+                    listingId = listingId,
+                    listingTitle = title,
+                    buyerId = buyerId,
+                    sellerId = sellerId,
+                    lastMessage = "",
+                    lastAt = Timestamp.now()
+                )
             ).await()
         }
         return chatId
@@ -283,5 +306,41 @@ class FirebaseMocarRepository(
                 )
             )
     }
+}
 
+class ListingPagingSource(
+    private val db: FirebaseFirestore,
+    private val pageSize: Int,
+    private val brandId: String? = null
+) : PagingSource<QuerySnapshot, ListingDto>() {
+    override suspend fun load(params: LoadParams<QuerySnapshot>): LoadResult<QuerySnapshot, ListingDto> {
+        return try {
+            // 기본 쿼리
+            var query = db.collection("listings")
+                .whereEqualTo("status", "on_sale")
+
+            // 브랜드 ID 필터
+            brandId?.let { id ->
+                query = query.whereEqualTo("brandId", id)
+            }
+
+            // 정렬·페이징
+            query = query.orderBy("createdAt")
+                .let { q ->
+                    params.key?.let { prev -> q.startAfter(prev.documents.last()) } ?: q
+                }
+                .limit(pageSize.toLong())
+
+            val snap = query.get().await()
+            val list = snap.toObjects(ListingDto::class.java)
+            LoadResult.Page(
+                data = list,
+                prevKey = null,
+                nextKey = if (snap.size() < pageSize) null else snap
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
+        }
+    }
+    override fun getRefreshKey(state: PagingState<QuerySnapshot, ListingDto>) = null
 }

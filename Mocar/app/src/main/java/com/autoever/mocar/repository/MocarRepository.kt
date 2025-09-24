@@ -1,5 +1,6 @@
 package com.autoever.mocar.repository
 
+import androidx.paging.PagingData
 import com.autoever.mocar.data.brands.BrandDto
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.price.PriceIndexDto
@@ -47,6 +48,15 @@ interface MocarRepository {
     fun sellerById(uid: String): Flow<Seller?>
 
     suspend fun updateListingStatus(listingId: String, status: String)
+
+    // 페이징 메서드
+    fun listingsOnSalePaged(pageSize: Int = 20): Flow<PagingData<ListingDto>>
+
+    // 브랜드 필터 페이징 메서드
+    fun listingsOnSalePagedByBrand(
+        pageSize: Int = 20,
+        brandId: String? = null
+    ): Flow<PagingData<ListingDto>>
 }
 
 sealed class StartSaleResult {
