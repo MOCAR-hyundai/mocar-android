@@ -84,6 +84,7 @@ fun SearchResultPage(
         topBar = {
             MocarTopBar(
                 title = { Text("검색 결과 (${filteredCars.size}대)", style = MaterialTheme.typography.titleMedium) },
+                onBack = { navController.popBackStack() }
             )
         }
     ) { innerPadding ->
