@@ -44,6 +44,7 @@ data class CarDetailUiState(
     val car: Car? = null,
     val seller:Seller? = null,
     val price: PriceUi? = null,
+    val isFavorite:Boolean = false,
     val loading: Boolean = true,
     val error: String? = null
 )
@@ -102,9 +103,10 @@ class CarDetailViewModel(
                 CarDetailUiState(loading = false)
             } else {
                 CarDetailUiState(
-                    car = dto.toCar(isFavorite = favIds.contains(dto.listingId)),
+                    car = dto.toCar(),
                     seller = seller,
                     price = price?.let { PriceUi(min = it.minPrice, avg = it.avgPrice, max = it.maxPrice) },
+                    isFavorite = favIds.contains(dto.listingId),
                     loading = false
                 )
             }
@@ -171,6 +173,7 @@ fun CarDetailRoute(
     val state by vm.uiState.collectAsState()
     val car = state.car
     val seller = state.seller
+//    val isFavorite by vm.isFavorite.collectAsState(initial = false)
 
     when {
         state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("로딩 중…") }
@@ -194,6 +197,7 @@ fun CarDetailRoute(
                 price = state.price,
                 isOwner = isOwner,
                 onBack = onBack,
+                isFavorite = state.isFavorite,
                 onToggleFavorite = { vm.toggleFavorite() },
                 onChangeStatus = { newStatus -> vm.changeStatus(newStatus) },
                 onBuyClick = {
