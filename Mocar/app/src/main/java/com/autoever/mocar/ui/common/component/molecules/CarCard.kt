@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Divider
@@ -84,6 +85,7 @@ fun CarCard(
     OutlinedCard(
         modifier = modifier
             .fillMaxWidth()
+            .widthIn(max = 320.dp)
             .wrapContentHeight(),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
@@ -97,7 +99,7 @@ fun CarCard(
                         AsyncImage(
                             model = car.imageUrl,
                             contentDescription = car.title,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.width(375.dp),
                             contentScale = ContentScale.Crop
                         )
                     }

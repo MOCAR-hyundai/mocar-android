@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -42,13 +43,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,6 +66,7 @@ import com.autoever.mocar.ui.common.component.atoms.BrandUi
 import com.autoever.mocar.ui.common.component.molecules.CarGrid
 import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.autoever.mocar.ui.common.component.molecules.FavoriteCarousel
+import com.autoever.mocar.viewmodel.HomeUiState
 import com.autoever.mocar.viewmodel.HomeViewModel
 
 @Composable
@@ -71,7 +77,7 @@ fun HomeRoute(
         androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val state by vm.uiState.collectAsState()
-    val favorites by vm.favoriteIds.collectAsState(emptySet())
+    val favCars by vm.favoriteCars.collectAsState(emptyList())
 
     when {
         state.loading -> Box(
@@ -86,9 +92,12 @@ fun HomeRoute(
         }
         else -> HomeScreen(
             navController = navController,
-            cars = state.cars,
-            brands = state.brands,
-            favorites = favorites,
+            state = state,
+//            cars = state.cars,
+//            brands = state.brands,
+            favoriteCars = favCars,
+            onSelectBrand = { brand -> vm.selectBrand(brand) },
+            onLoadMore = { vm.loadNextPage() },
             scrollSignal = scrollSignal
         )
     }
@@ -98,19 +107,18 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     navController: NavController,
-    cars: List<Car>,
-    brands: List<BrandUi>,
-    favorites: Set<String>,
-    scrollSignal: Int
+    state: HomeUiState,
+    favoriteCars: List<Car>,
+    onSelectBrand: (String?) -> Unit,
+    onLoadMore: () -> Unit,
+    scrollSignal: Int,
+//    vm: HomeViewModel
 ) {
     val gutter = 22.dp
     var selectedBrandId by remember { mutableStateOf<String?>(null) }
 
-    val selectedBrandName = remember(selectedBrandId, brands) {
-        brands.firstOrNull { it.id == selectedBrandId }?.name
-    }
 
-    val listState = rememberLazyListState()
+    val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
     // 🔹 시그널 값이 바뀔 때마다 맨 위로 스크롤
     LaunchedEffect(scrollSignal) {
@@ -119,12 +127,15 @@ fun HomeScreen(
         }
     }
 
-    val filtered = remember(selectedBrandName, cars) {
-        if (selectedBrandName.isNullOrBlank()) {
-            cars
-        } else {
-            cars.filter { it.brandName.equals(selectedBrandName, ignoreCase = true) }
+    // ----- 바닥 트리거 감지 (loadMoreTrigger가 보이면 true) -----
+    val shouldLoadMore by remember(listState) {
+        derivedStateOf {
+            val visibleKeys = listState.layoutInfo.visibleItemsInfo.mapNotNull { it.key }
+            "loadMoreTrigger" in visibleKeys
         }
+    }
+    LaunchedEffect(shouldLoadMore, state.pageLoading, state.endReached) {
+        if (shouldLoadMore && !state.pageLoading && !state.endReached) onLoadMore()
     }
 
     LazyColumn(
@@ -149,14 +160,12 @@ fun HomeScreen(
             )
         }
 
-        // 찜한 목록 캐러셀
+        // 찜한 목록
         item { SectionHeader("찜한 목록", "Available", "View All") }
         item {
             FavoriteCarousel(
                 navController = navController,
-                cars = cars
-                    .filter { favorites.contains(it.id) }
-                    .map { it.toUi() },
+                cars = favoriteCars.map { it.toUi() }    // 별도 Flow에서 가져온 찜 차량
             )
         }
 
@@ -165,17 +174,18 @@ fun HomeScreen(
             Text("Brands", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(brands, key = { it.id }) { brand ->
+                items(state.brands, key = { it.id }) { brand ->
                     Box(
                         modifier = Modifier.width(80.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         BrandChip(
                             brand = brand,
-                            selected = selectedBrandId == brand.id,
+                            selected = state.selectedBrand == brand.name,
                             onClick = {
-                                selectedBrandId =
-                                    if (selectedBrandId == brand.id) null else brand.id
+                                onSelectBrand(
+                                    if (state.selectedBrand == brand.name) null else brand.name
+                                )
                             },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -186,16 +196,11 @@ fun HomeScreen(
 
         // 필터 결과 헤더
         item {
-            val title = if (selectedBrandId == null) {
-                "전체 차량"
-            } else {
-                brands.firstOrNull { it.id == selectedBrandId }?.name ?: "필터 결과"
-            }
             SectionHeader(
-                title = title,
+                title = state.selectedBrand ?: "전체 차량",
                 subtitle = "Available",
-                actionText = if (selectedBrandId != null) "Clear" else null,
-                onActionClick = { selectedBrandId = null }
+                actionText = if (state.selectedBrand != null) "Clear" else null,
+                onActionClick = { onSelectBrand(null) }
             )
         }
 
@@ -203,10 +208,20 @@ fun HomeScreen(
         item {
             CarGrid(
                 navController = navController,
-                cars = filtered.map { car ->
-                    car.toUi()
-                },
+                cars = state.cars.map { it.toUi() }
             )
+        }
+        // 바닥 트리거 아이템 (키 꼭 지정!)
+        item(key = "loadMoreTrigger") {
+            Spacer(Modifier.height(1.dp))
+        }
+        // 하단 페이지 로딩 인디케이터
+        if (state.pageLoading) {
+            item {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 }

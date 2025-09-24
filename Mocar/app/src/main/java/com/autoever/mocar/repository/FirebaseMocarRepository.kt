@@ -11,6 +11,8 @@ import com.autoever.mocar.domain.model.ChatRoom
 import com.autoever.mocar.domain.model.Message
 import com.autoever.mocar.domain.model.Seller
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
@@ -282,6 +284,48 @@ class FirebaseMocarRepository(
                     "updatedAt" to nowStr  //문자열 저장
                 )
             )
+    }
+
+    override suspend fun fetchListingsPage(
+        limit: Int,
+        startAfter: DocumentSnapshot?,
+        brandEquals: String?,
+        orderByField: String,
+        descending: Boolean
+    ): Pair<List<DocumentSnapshot>, DocumentSnapshot?> {
+
+        var q: Query = db.collection("listings")
+
+        if (!brandEquals.isNullOrBlank()) {
+            q = q.whereEqualTo("brand", brandEquals)
+        }
+
+        // 정렬 고정: 문서 ID (복합 인덱스 불필요)
+        q = q.orderBy(FieldPath.documentId())
+
+        if (startAfter != null) {
+            q = q.startAfter(startAfter.id)   // id로 커서 이동
+        }
+
+        q = q.limit(limit.toLong())
+
+        val snap = q.get().await()
+        val docs = snap.documents
+        val last = docs.lastOrNull()
+        return docs to last
+    }
+
+    override suspend fun fetchListingsByIds(ids: List<String>): List<DocumentSnapshot> {
+        if (ids.isEmpty()) return emptyList()
+
+        val results = mutableListOf<DocumentSnapshot>()
+        for (chunk in ids.chunked(10)) { // Firestore whereIn 최대 10개 제한
+            val snap = db.collection("listings")
+                .whereIn("listingId", chunk)  // listings 컬렉션 안에 listingId 필드가 있어야 함
+                .get().await()
+            results += snap.documents
+        }
+        return results
     }
 
 }

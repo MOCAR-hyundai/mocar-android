@@ -6,6 +6,7 @@ import com.autoever.mocar.data.price.PriceIndexDto
 import com.autoever.mocar.domain.model.ChatRoom
 import com.autoever.mocar.domain.model.Message
 import com.autoever.mocar.domain.model.Seller
+import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.Flow
 
 interface MocarRepository {
@@ -47,6 +48,15 @@ interface MocarRepository {
     fun sellerById(uid: String): Flow<Seller?>
 
     suspend fun updateListingStatus(listingId: String, status: String)
+
+    suspend fun fetchListingsPage(
+        limit: Int,
+        startAfter: DocumentSnapshot? = null,
+        brandEquals: String? = null,
+        orderByField: String = "createdAt",
+        descending: Boolean = true
+    ): Pair<List<com.google.firebase.firestore.DocumentSnapshot>, DocumentSnapshot?>
+    suspend fun fetchListingsByIds(ids: List<String>): List<DocumentSnapshot>
 }
 
 sealed class StartSaleResult {
