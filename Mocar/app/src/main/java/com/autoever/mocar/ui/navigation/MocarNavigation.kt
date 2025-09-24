@@ -156,7 +156,6 @@ fun MocarNavigation() {
             SearchResultPage(
                 navController = navController,
                 searchResultViewModel = searchResultViewModel,
-                onBack = { navController.popBackStack() }
             )
         }
 
