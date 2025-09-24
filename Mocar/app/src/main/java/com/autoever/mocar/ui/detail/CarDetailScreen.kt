@@ -1,5 +1,6 @@
 package com.autoever.mocar.ui.detail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -563,12 +564,12 @@ fun PriceBandReadonly(
                 shape = RoundedCornerShape(10.dp),
                 color = Color.White,
                 tonalElevation = 2.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .absoluteOffset(
                         x = with(density) { clampedXPx.toDp() - labelHalfDp }, // 중앙 정렬
-                        y = (-23).dp
+                        y = (-21).dp
                     )
             ) {
                 Text(
