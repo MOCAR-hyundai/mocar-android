@@ -202,6 +202,11 @@ fun RangeInputSlider(
     var maxInput by remember { mutableStateOf("") }
     var previousRange by remember { mutableStateOf(currentRange) }
 
+    LaunchedEffect(currentRange) {
+        minInput = if (currentRange.start == valueRange.start) "" else currentRange.start.toInt().toString()
+        maxInput = if (currentRange.endInclusive == valueRange.endInclusive) "" else currentRange.endInclusive.toInt().toString()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,21 +219,9 @@ fun RangeInputSlider(
 
         RangeSlider(
             value = currentRange,
-            onValueChange = {newRange ->
-                if (newRange.start == valueRange.start && newRange.endInclusive == valueRange.endInclusive) {
-                    minInput = ""
-                    maxInput = ""
-                } else {
-                    if (newRange.start != previousRange.start) {
-                        minInput = newRange.start.toInt().toString()
-                    }
-                    if (newRange.endInclusive != previousRange.endInclusive) {
-                        maxInput = newRange.endInclusive.toInt().toString()
-                    }
-                }
-
-                previousRange = newRange
+            onValueChange = { newRange ->
                 onValueChange(newRange)
+                previousRange = newRange
             },
             valueRange = valueRange,
             colors = SliderDefaults.colors(
