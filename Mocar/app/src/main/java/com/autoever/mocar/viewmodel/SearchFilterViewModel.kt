@@ -528,14 +528,14 @@ class SearchResultViewModel : ViewModel() {
 
                 val list = snap?.documents?.mapNotNull { d ->
                     // createdAt이 문자열/타임스탬프 혼재해도 문자열로 통일
-                    val createdAtStr =
-                        d.getString("createdAt")
-                            ?: d.getTimestamp("createdAt")?.toDate()?.let {
-                                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA)
-                                    .apply { timeZone = TimeZone.getTimeZone("Asia/Seoul") }
-                                    .format(it)
-                            }
-                            ?: ""
+//                    val createdAtStr =
+//                        d.getString("createdAt")
+//                            ?: d.getTimestamp("createdAt")?.toDate()?.let {
+//                                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA)
+//                                    .apply { timeZone = TimeZone.getTimeZone("Asia/Seoul") }
+//                                    .format(it)
+//                            }
+//                            ?: ""
 
                     FavoriteDto(
                         fid = d.id,

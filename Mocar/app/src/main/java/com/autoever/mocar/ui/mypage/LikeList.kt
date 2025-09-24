@@ -18,6 +18,7 @@ import androidx.navigation.NavHostController
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.listings.toCar
+import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
 import com.autoever.mocar.ui.common.component.molecules.CarGrid
 import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.google.firebase.auth.FirebaseAuth
@@ -34,7 +35,7 @@ data class LikeItem(
     val fid: String = "",
     val userId: String = "",
     val listingId: String = "",
-    val createdAt: Timestamp? = null
+    val createdAt: String = ""
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,13 +115,9 @@ fun LikeListScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
+            MocarTopBar(
                 title = { Text("나의 찜 매물") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                }
+                onBack = { navController.popBackStack() },
             )
         }
     ) { paddingValues ->
@@ -143,7 +140,7 @@ fun LikeListScreen(
                 }
                 else -> {
                     // Car → CarUi 매핑 후 2열 Grid로 표시
-                    val carUis = likedCars.map { it.toUi(true) }
+                    val carUis = likedCars.map { it.toUi() }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
@@ -164,7 +161,7 @@ fun LikeListScreen(
 }
 
 /* ---------------- 확장함수: Car → CarUi ---------------- */
-private fun Car.toUi(isFavorite: Boolean = false) = CarUi(
+private fun Car.toUi() = CarUi(
     id = id,
     title = title,
     imageUrl = imageUrl,
@@ -172,14 +169,4 @@ private fun Car.toUi(isFavorite: Boolean = false) = CarUi(
     mileageKm = mileageKm,
     region = region,
     priceKRW = priceKRW,
-    isFavorite = isFavorite
 )
-
-
-@Preview(showBackground = true)
-@Composable
-fun LikeListScreenPreview() {
-    LikeListScreen(
-        navController = androidx.navigation.compose.rememberNavController()
-    )
-}
