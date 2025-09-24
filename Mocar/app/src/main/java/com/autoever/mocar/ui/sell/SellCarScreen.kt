@@ -123,6 +123,17 @@ fun SellCarScreen() {
     var form by remember { mutableStateOf(SellForm()) }
     var step by remember { mutableStateOf(SellStep.Plate) }
 
+    LaunchedEffect(lookup.car?.id, lookup.loading, lookup.error) {
+        if (!lookup.loading && lookup.car != null) {
+            step = SellStep.CarInfo
+        }
+    }
+    LaunchedEffect(step, form.plate, form.owner) {
+        if (step == SellStep.Owner) {
+            vm.clearStates()
+        }
+    }
+
     fun resetAll() {
         form = SellForm()
         vm.clearStates()
@@ -147,6 +158,16 @@ fun SellCarScreen() {
     val saleBlocked: Boolean = remember(lookup.raw?.status) {
         val s = lookup.raw?.status
         s == ListingStatus.ON_SALE || s == ListingStatus.RESERVED
+    }
+
+    // 조회 실패 여부 플래그
+    val ownerNotFound: Boolean = remember(
+        lookup.loading, lookup.car, lookup.error, step, form.owner, form.plate
+    ) {
+        step == SellStep.Owner &&
+                !lookup.loading &&
+                lookup.car == null &&
+                lookup.error != null
     }
 
     Scaffold(
@@ -188,9 +209,8 @@ fun SellCarScreen() {
                 },
                 onNext = {
                     when (step) {
-                        SellStep.Owner -> {               // 소유자명 입력 후 조회
+                        SellStep.Owner -> {
                             vm.findListing(form.plate, form.owner)
-                            step = SellStep.CarInfo
                         }
                         SellStep.Review -> {
                             if (!submit.loading) {
@@ -210,7 +230,7 @@ fun SellCarScreen() {
 // 버튼 활성화 조건 (기존과 동일, 필요시 Owner 단계에서 로딩 동안 false로도 확장 가능)
                 nextEnabled = when (step) {
                     SellStep.Plate -> form.plate.isNotBlank()
-                    SellStep.Owner -> form.owner.isNotBlank() && !lookup.loading
+                    SellStep.Owner -> form.owner.isNotBlank() && !lookup.loading && !ownerNotFound
                     SellStep.CarInfo -> {
                         val blocked = lookup.raw?.status in setOf(ListingStatus.ON_SALE, ListingStatus.RESERVED)
                         !blocked
@@ -236,7 +256,9 @@ fun SellCarScreen() {
             ) { s ->
                 when (s) {
                     SellStep.Plate    -> PlateStep(form)
-                    SellStep.Owner    -> OwnerStep(form)
+                    SellStep.Owner    -> OwnerStep(
+                        form = form,
+                    )
                     SellStep.CarInfo -> {
                         // 조회 결과를 form에 반영
                         LaunchedEffect(lookup.car?.id) {
@@ -386,16 +408,22 @@ private fun PlateStep(form: SellForm) {
 
 /* ---------- Step 2: 소유자명 ---------- */
 @Composable
-private fun OwnerStep(form: SellForm) {
+private fun OwnerStep(form: SellForm, errorText: String? = null) {
     StepScaffold(
         headline = "소유자명을 입력해주세요.",
         input = {
-            LabeledField(
-                placeholder = "홍길동",
-                value = form.owner,
-                onValueChange = { form.owner = it },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-            )
+            Column {
+                LabeledField(
+                    placeholder = "홍길동",
+                    value = form.owner,
+                    onValueChange = { form.owner = it },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                )
+                if (!errorText.isNullOrBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(errorText, color = Color(0xFFD92D20))
+                }
+            }
         }
     )
 }

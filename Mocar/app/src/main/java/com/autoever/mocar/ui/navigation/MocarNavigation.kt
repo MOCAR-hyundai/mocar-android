@@ -18,6 +18,7 @@ import com.autoever.mocar.ui.auth.SignUpPage
 import com.autoever.mocar.ui.chat.ChatRoomScreen
 import com.autoever.mocar.ui.chat.ChatsScreen
 import com.autoever.mocar.ui.home.MainScreen
+import com.autoever.mocar.ui.home.OnboardingScreen
 import com.autoever.mocar.ui.mypage.BuyListScreen
 import com.autoever.mocar.ui.search.ModelSelect
 import com.autoever.mocar.ui.search.SearchHistoryScreen
@@ -38,6 +39,7 @@ const val ROUTE_AUTH = "auth"
 const val ROUTE_MAIN = "main"
 const val ROUTE_CAR_DETAIL = "carDetail"
 const val ROUTE_SEARCH = "search"
+const val ROUTE_ONBOARDING = "onboarding"
 fun carDetailRoute(carId: String) = "$ROUTE_CAR_DETAIL/$carId"
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -55,8 +57,19 @@ fun MocarNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = ROUTE_AUTH
+        startDestination = ROUTE_ONBOARDING
     ) {
+        composable(ROUTE_ONBOARDING) {
+            OnboardingScreen(
+                onFinished = {
+                    val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+                    navController.navigate(if (isLoggedIn) ROUTE_MAIN else ROUTE_AUTH) {
+                        popUpTo(ROUTE_ONBOARDING) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
         composable(ROUTE_AUTH) {
             LoginPage(navController)
         }
