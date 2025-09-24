@@ -1,6 +1,3 @@
-import android.annotation.SuppressLint
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,16 +35,11 @@ import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
 import com.autoever.mocar.ui.common.util.formatKrwPretty
 import com.autoever.mocar.viewmodel.ResultFilterParams
 import com.autoever.mocar.viewmodel.SearchResultViewModel
-import java.text.NumberFormat
-import java.util.Locale
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SearchResultPage(
     navController: NavController,
     searchResultViewModel: SearchResultViewModel,
-    onBack: () -> Unit
 ) {
     val results by searchResultViewModel.results.collectAsState()
     val favorites by searchResultViewModel.favorites.collectAsState()
@@ -62,11 +54,11 @@ fun SearchResultPage(
             ResultFilterParams(
                 subModels = emptyList(),
                 minPrice = 0f,
-                maxPrice = 80000000f, // 단위: 원
-                minYear = 2000f,
+                maxPrice = 1000000000f, // 단위: 원
+                minYear = 1990f,
                 maxYear = 2025f,
                 minMileage = 0f,
-                maxMileage = 300000f,
+                maxMileage = 30000000f,
                 types = emptyList(),
                 fuels = emptyList(),
                 regions = emptyList(),
@@ -92,8 +84,7 @@ fun SearchResultPage(
         topBar = {
             MocarTopBar(
                 title = { Text("검색 결과 (${filteredCars.size}대)", style = MaterialTheme.typography.titleMedium) },
-                onBack = onBack,
-                onMore = { /* TODO: 메뉴 */ }
+                onBack = { navController.popBackStack() }
             )
         }
     ) { innerPadding ->
@@ -180,12 +171,12 @@ fun FilterRowSection(
     filter: ResultFilterParams,
     onFilterChange: (ResultFilterParams) -> Unit
 ) {
-    var minPrice by remember { mutableStateOf(filter.minPrice) }
-    var maxPrice by remember { mutableStateOf(filter.maxPrice) }
-    var minYear by remember { mutableStateOf(filter.minYear) }
-    var maxYear by remember { mutableStateOf(filter.maxYear) }
-    var minMileage by remember { mutableStateOf(filter.minMileage) }
-    var maxMileage by remember { mutableStateOf(filter.maxMileage) }
+    var minPrice by remember { mutableFloatStateOf(filter.minPrice) }
+    var maxPrice by remember { mutableFloatStateOf(filter.maxPrice) }
+    var minYear by remember { mutableFloatStateOf(filter.minYear) }
+    var maxYear by remember { mutableFloatStateOf(filter.maxYear) }
+    var minMileage by remember { mutableFloatStateOf(filter.minMileage) }
+    var maxMileage by remember { mutableFloatStateOf(filter.maxMileage) }
 
     var selectedFuelType by remember { mutableStateOf("전체") }
     var selectedRegion by remember { mutableStateOf("전체") }
@@ -248,8 +239,8 @@ fun FilterRowSection(
         FilterRangeModal(
             title = "연식",
             unit = "년",
-            valueRange = 2000f..2025f,
-            steps = (2025 - 2000).toInt() - 1,
+            valueRange = 1990f..2025f,
+            steps = (2025 - 1990) - 1,
             currentMin = minYear,
             currentMax = maxYear,
             onDismiss = { showYearDialog = false },
@@ -353,7 +344,6 @@ fun BottomSheetDialog(
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false // Partial(중간) 상태 허용
     )
-    val coroutineScope = rememberCoroutineScope()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
