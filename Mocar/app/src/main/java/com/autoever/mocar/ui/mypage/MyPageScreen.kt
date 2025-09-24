@@ -249,7 +249,7 @@ fun MyPageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onRegisterListClick() }
+                    .clickable { navController.navigate("sell_list") }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

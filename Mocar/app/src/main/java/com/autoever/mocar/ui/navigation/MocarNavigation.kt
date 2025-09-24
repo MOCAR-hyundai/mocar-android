@@ -25,6 +25,7 @@ import com.autoever.mocar.ui.search.SearchHistoryScreen
 import com.autoever.mocar.ui.search.SearchPage
 import com.autoever.mocar.ui.search.SubModelSelect
 import com.autoever.mocar.ui.mypage.LikeListScreen
+import com.autoever.mocar.ui.mypage.SellListScreen
 import com.autoever.mocar.viewmodel.CarDetailRoute
 import com.autoever.mocar.viewmodel.ListingViewModel
 import com.autoever.mocar.viewmodel.SearchFilterViewModel
@@ -180,6 +181,15 @@ fun MocarNavigation() {
 
         composable("buy_list") {
             BuyListScreen(
+                navController = navController,
+                onCarClick = { carId ->
+                    navController.navigate("carDetail/$carId")
+                }
+            )
+        }
+        // TODO: oncarclick 처리하기
+        composable("sell_list") {
+            SellListScreen(
                 navController = navController,
                 onCarClick = { carId ->
                     navController.navigate("carDetail/$carId")
