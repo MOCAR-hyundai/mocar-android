@@ -1,12 +1,9 @@
 import android.app.Application
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -42,7 +39,6 @@ const val ROUTE_SEARCH = "search"
 const val ROUTE_ONBOARDING = "onboarding"
 fun carDetailRoute(carId: String) = "$ROUTE_CAR_DETAIL/$carId"
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MocarNavigation() {
     val navController = rememberNavController()
@@ -69,7 +65,7 @@ fun MocarNavigation() {
                     }
                 }
             )
-        }
+        }        
         composable(ROUTE_AUTH) {
             LoginPage(navController)
         }
@@ -156,17 +152,19 @@ fun MocarNavigation() {
             SearchResultPage(
                 navController = navController,
                 searchResultViewModel = searchResultViewModel,
-                onBack = { navController.popBackStack() }
             )
         }
 
         composable("history") {
             val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
             SearchHistoryScreen(
+                navController = navController,
                 userId = userId,
                 searchFilterViewModel = searchFilterViewModel,
                 searchManufacturerViewModel = manufacturerViewModel,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                listingViewModel = listingViewModel,
+                searchResultViewModel = searchResultViewModel
             )
         }
 
@@ -179,6 +177,13 @@ fun MocarNavigation() {
             )
         }
 
+        composable("chats") {
+            ChatsScreen(
+                navController = navController,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable("buy_list") {
             BuyListScreen(
                 navController = navController,
@@ -187,6 +192,7 @@ fun MocarNavigation() {
                 }
             )
         }
+
         // TODO: oncarclick 처리하기
         composable("sell_list") {
             SellListScreen(
