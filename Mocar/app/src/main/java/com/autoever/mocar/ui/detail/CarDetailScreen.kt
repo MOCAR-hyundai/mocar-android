@@ -73,13 +73,14 @@ fun CarDetailScreen(
     seller: Seller?,
     price: PriceUi?,
     isOwner: Boolean,
+    isFavorite: Boolean,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
     onChangeStatus: (String) -> Unit,
     onBuyClick: () -> Unit
 ) {
 
-    var isFav by remember(car.id) { mutableStateOf(car.isFavorite) }
+    var isFav by remember(car.id) { mutableStateOf(isFavorite) }
     var menuExpanded by remember { mutableStateOf(false) }
     var status by remember(car.id) { mutableStateOf(car.status) }
 

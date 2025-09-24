@@ -72,6 +72,7 @@ fun HomeRoute(
         androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val state by vm.uiState.collectAsState()
+    val favorites by vm.favoriteIds.collectAsState(emptySet())
 
     when {
         state.loading -> Box(
@@ -88,6 +89,7 @@ fun HomeRoute(
             navController = navController,
             cars = state.cars,
             brands = state.brands,
+            favorites = favorites,
             onToggleFavorite = { vm.toggleFavorite(it) },
             scrollSignal = scrollSignal
         )
@@ -100,6 +102,7 @@ fun HomeScreen(
     navController: NavController,
     cars: List<Car>,
     brands: List<BrandUi>,
+    favorites: Set<String>,
     onToggleFavorite: (String) -> Unit,
     scrollSignal: Int
 ) {
@@ -153,9 +156,11 @@ fun HomeScreen(
         item { SectionHeader("찜한 목록", "Available", "View All") }
         item {
             FavoriteCarousel(
-                cars = cars.filter { it.isFavorite }.map { it.toUi() },
+                cars = cars
+                    .filter { favorites.contains(it.id) }
+                    .map { it.toUi(isFavorite = true) },
                 onToggleFav = { c -> onToggleFavorite(c.id) },
-                onCardClick = { car -> navController.navigate(carDetailRoute(car.id)) }
+                onCardClick   = { car -> navController.navigate(carDetailRoute(car.id)) }
             )
         }
 
@@ -201,7 +206,9 @@ fun HomeScreen(
         // 차량 카드 2열 그리드
         item {
             CarGrid(
-                cars = filtered.map { it.toUi() },
+                cars = filtered.map { car ->
+                    car.toUi(isFavorite = favorites.contains(car.id))
+                },
                 onFavoriteToggle = { carId -> onToggleFavorite(carId) },
                 onCardClick = { carId -> navController.navigate(carDetailRoute(carId)) }
             )
@@ -210,7 +217,7 @@ fun HomeScreen(
 }
 
 /* ---------------- 매퍼 (도메인 → UI) ---------------- */
-private fun Car.toUi() = CarUi(
+private fun Car.toUi(isFavorite: Boolean) = CarUi(
     id = id,
     title = title,
     imageUrl = imageUrl,   // URL 사용
@@ -332,14 +339,3 @@ private fun SectionHeader(
         }
     }
 }
-
-/* ---------------- 가격 포맷터 ---------------- */
-//fun formatKrwPretty(amount: Long): String {
-//    val eok = amount / 100_000_000
-//    val man = (amount % 100_000_000) / 10_000
-//    return when {
-//        eok > 0L && man > 0L -> "${eok}억 ${String.format("%,d만원", man)}"
-//        eok > 0L && man == 0L -> "${eok}억"
-//        else -> String.format("%,d만원", man)
-//    }
-//}

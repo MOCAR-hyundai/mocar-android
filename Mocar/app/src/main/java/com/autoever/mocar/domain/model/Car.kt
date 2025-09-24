@@ -1,6 +1,5 @@
 package com.autoever.mocar.domain.model
 
-import com.autoever.mocar.viewmodel.ListingStatus
 
 data class Car(
     val id: String,              // 내부 고유 ID
@@ -16,7 +15,6 @@ data class Car(
     val priceKRW: Long,          // 가격 (원)
     val images: List<String>,
     val imageUrl: String?,
-    var isFavorite: Boolean = false,
     val brandId: String,          // 브랜드 ID
     val brandName: String = "",
     val description: String? = null,

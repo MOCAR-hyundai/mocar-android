@@ -11,15 +11,21 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.autoever.mocar.data.favorites.FavoriteDto
 import com.autoever.mocar.data.listings.ListingDto
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import java.text.SimpleDateFormat
 import java.time.Instant
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 data class SearchFilterState(
     val priceRange: ClosedFloatingPointRange<Float> = 0f..100000f,
@@ -419,11 +425,11 @@ class SearchFilterViewModelFactory(
 }
 
 // FavoriteDto 정의
-data class FavoriteDto(
-    val userId: String,
-    val listingId: String,
-    val createdAt: String
-)
+//data class FavoriteDto(
+//    val userId: String,
+//    val listingId: String,
+//    val createdAt: String
+//)
 
 // 검색 결과 viewmodel
 class SearchResultViewModel : ViewModel() {
@@ -434,8 +440,25 @@ class SearchResultViewModel : ViewModel() {
     private val _favorites = MutableStateFlow<List<FavoriteDto>>(emptyList())
     val favorites: StateFlow<List<FavoriteDto>> = _favorites
 
+    // Firebase
     private val db = Firebase.firestore
+    private val auth = FirebaseAuth.getInstance()
     private val collectionName = "favorites"
+
+    // 리스너 관리
+    private var favListener: ListenerRegistration? = null
+    private val authListener = FirebaseAuth.AuthStateListener { fa ->
+        // 로그인 상태가 바뀌면 구독도 갱신
+        startOrRestartFavoritesListener(fa.currentUser?.uid)
+    }
+
+    init {
+        // 앱 시작 시 현재 유저로 구독 시작
+        startOrRestartFavoritesListener(auth.currentUser?.uid)
+        // 추후 로그인/로그아웃 대응
+        auth.addAuthStateListener(authListener)
+    }
+
 
     // 검색 결과 저장
     fun setResults(listings: List<ListingDto>) {
@@ -447,52 +470,87 @@ class SearchResultViewModel : ViewModel() {
         _results.value = emptyList()
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun addFavorite(listing: ListingDto) {
-        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
-        val uid = currentUser.uid
+        val uid = auth.currentUser?.uid ?: return
+        val fid = "${uid}_${listing.listingId}"
 
-        // 이미 찜되어 있으면 무시
-        if (_favorites.value.any { it.userId == uid && it.listingId == listing.listingId }) return
-
-        val newFavorite = FavoriteDto(
+        val dto = FavoriteDto(
+            fid = fid,
             userId = uid,
-            listingId = listing.listingId,
-            createdAt = Instant.now().toString()
+            listingId = listing.listingId
         )
 
-        // 로컬 상태 업데이트
-        _favorites.value = _favorites.value + newFavorite
+        // 낙관적 UI 업데이트 (리스너로 곧 동기화됨)
+        if (_favorites.value.none { it.fid == fid }) {
+            _favorites.value = _favorites.value + dto
+        }
 
-        // Firebase에 저장
         db.collection(collectionName)
-            .add(newFavorite)
-            .addOnSuccessListener { docRef ->
-                // Firebase 문서 ID를 fid로 저장할 필요가 있으면 여기서 업데이트 가능
-                // 예: _favorites.value = _favorites.value.map { if (it == newFavorite) it.copy(fid = docRef.id) else it }
-            }
-            .addOnFailureListener { e ->
-                // 실패하면 로컬에서 제거
-                _favorites.value = _favorites.value.filterNot { it == newFavorite }
+            .document(fid)
+            .set(dto)
+            .addOnFailureListener {
+                // 실패 시 롤백
+                _favorites.value = _favorites.value.filterNot { it.fid == fid }
             }
     }
 
+    /** 즐겨찾기 제거 */
     fun removeFavorite(listingId: String) {
-        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
-        val uid = currentUser.uid
+        val uid = auth.currentUser?.uid ?: return
+        val fid = "${uid}_${listingId}"
 
-        val favorite = _favorites.value.find { it.userId == uid && it.listingId == listingId } ?: return
+        // 낙관적 UI 업데이트
+        _favorites.value = _favorites.value.filterNot { it.fid == fid }
 
-        // 로컬 상태 업데이트
-        _favorites.value = _favorites.value.filterNot { it == favorite }
-
-        // Firebase에서 삭제
         db.collection(collectionName)
-            .whereEqualTo("userId", uid)
-            .whereEqualTo("listingId", listingId)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                snapshot.documents.forEach { it.reference.delete() }
+            .document(fid)
+            .delete()
+            .addOnFailureListener {
+                // 실패 시 되돌릴 수 있으면 복구(옵션)
+                val restored = FavoriteDto(fid, uid, listingId)
+                _favorites.value = (_favorites.value + restored).distinctBy { it.fid }
             }
+    }
+    /** 현재 사용자 uid로 favorites 실시간 구독 시작/재시작 */
+    private fun startOrRestartFavoritesListener(uid: String?) {
+        favListener?.remove()
+        favListener = null
+
+        if (uid == null) {
+            _favorites.value = emptyList()
+            return
+        }
+
+        favListener = db.collection(collectionName)
+            .whereEqualTo("userId", uid)
+            .addSnapshotListener { snap, err ->
+                if (err != null) return@addSnapshotListener
+
+                val list = snap?.documents?.mapNotNull { d ->
+                    // createdAt이 문자열/타임스탬프 혼재해도 문자열로 통일
+                    val createdAtStr =
+                        d.getString("createdAt")
+                            ?: d.getTimestamp("createdAt")?.toDate()?.let {
+                                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA)
+                                    .apply { timeZone = TimeZone.getTimeZone("Asia/Seoul") }
+                                    .format(it)
+                            }
+                            ?: ""
+
+                    FavoriteDto(
+                        fid = d.id,
+                        userId = d.getString("userId") ?: return@mapNotNull null,
+                        listingId = d.getString("listingId") ?: return@mapNotNull null
+                    )
+                }.orEmpty()
+
+                _favorites.value = list
+            }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        favListener?.remove()
+        auth.removeAuthStateListener(authListener)
     }
 }

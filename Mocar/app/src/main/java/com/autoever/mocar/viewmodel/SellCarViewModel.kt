@@ -89,7 +89,7 @@ class SellCarViewModel(
                 _lookup.value = if (dto != null) {
                     ListingLookupState(
                         loading = false,
-                        car = dto.toCar(isFavorite = false),
+                        car = dto.toCar(),
                         raw = dto
                     )
                 } else {
@@ -163,7 +163,7 @@ class SellCarViewModel(
                 if (refreshed != null) {
                     _lookup.value = ListingLookupState(
                         loading = false,
-                        car = refreshed.toCar(false),
+                        car = refreshed.toCar(),
                         raw = refreshed
                     )
                     _submit.value = SellSubmitState(loading = false, done = true)

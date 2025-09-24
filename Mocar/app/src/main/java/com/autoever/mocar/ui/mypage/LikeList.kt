@@ -19,6 +19,7 @@ import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.listings.toCar
 import com.autoever.mocar.ui.common.component.molecules.CarGrid
+import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
@@ -81,7 +82,8 @@ fun LikeListScreen(
                         async {
                             try {
                                 val doc = db.collection("listings").document(id).get().await()
-                                doc.toObject(ListingDto::class.java)?.toCar(isFavorite = true)
+                                doc.toObject(ListingDto::class.java)?.toCar()
+
                             } catch (_: Exception) {
                                 null
                             }
@@ -141,7 +143,7 @@ fun LikeListScreen(
                 }
                 else -> {
                     // Car → CarUi 매핑 후 2열 Grid로 표시
-                    val carUis = likedCars.map { it.toCarUi() }
+                    val carUis = likedCars.map { it.toUi(true) }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
@@ -162,7 +164,7 @@ fun LikeListScreen(
 }
 
 /* ---------------- 확장함수: Car → CarUi ---------------- */
-private fun Car.toCarUi() = com.autoever.mocar.ui.common.component.molecules.CarUi(
+private fun Car.toUi(isFavorite: Boolean = false) = CarUi(
     id = id,
     title = title,
     imageUrl = imageUrl,

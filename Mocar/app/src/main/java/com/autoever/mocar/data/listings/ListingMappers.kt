@@ -3,7 +3,7 @@ package com.autoever.mocar.data.listings
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.viewmodel.ListingStatus
 
-fun ListingDto.toCar(isFavorite: Boolean): Car = Car(
+fun ListingDto.toCar(): Car = Car(
     id = listingId,
     plateNo = plateNo,
     title = title.ifBlank { listOf(brand, model, trim).filter { it.isNotBlank() }.joinToString(" ") },
@@ -17,7 +17,6 @@ fun ListingDto.toCar(isFavorite: Boolean): Car = Car(
     priceKRW = price,
     images = images,
     imageUrl = images.firstOrNull(),
-    isFavorite = isFavorite,
     brandId = "",
     brandName = brand,
     description = description.ifBlank { null },

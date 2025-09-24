@@ -31,6 +31,7 @@ import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.listings.toCar
 import com.autoever.mocar.ui.common.component.molecules.CarGrid
+import com.autoever.mocar.ui.common.component.molecules.CarUi
 import com.autoever.mocar.ui.common.util.formatKrwPretty
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -71,6 +72,17 @@ fun BuyListScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Firebase에서 찜 목록 가져오기
+    var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(user?.uid) {
+        if (user == null) return@LaunchedEffect
+        db.collection("favorites")
+            .whereEqualTo("userId", user.uid)
+            .addSnapshotListener { snap, _ ->
+                favoriteIds = snap?.documents
+                    ?.mapNotNull { it.getString("listingId") }
+                    ?.toSet() ?: emptySet()
+            }
+    }
     LaunchedEffect(user?.uid) {
         if (user == null) {
             errorMessage = "로그인이 필요합니다"
@@ -99,7 +111,7 @@ fun BuyListScreen(
                         async {
                             try {
                                 val doc = db.collection("listings").document(id).get().await()
-                                doc.toObject(ListingDto::class.java)?.toCar(isFavorite = true)
+                                doc.toObject(ListingDto::class.java)?.toCar()
                             } catch (_: Exception) {
                                 null
                             }
@@ -154,7 +166,9 @@ fun BuyListScreen(
 
                 else -> {
                     // Car → CarUi 매핑 후 2열 Grid로 표시
-                    val carUis = boughtCars.map { it.toCarUi() }
+                    val carUis = boughtCars.map { car ->
+                        car.toUi(isFavorite = favoriteIds.contains(car.id))
+                    }
                     val ordersMap = orderItems.associateBy { it.listingId }
 
                     LazyColumn(
@@ -263,10 +277,10 @@ private fun String.toKoreanDateFormat(): String {
 }
 
 /* ---------------- 확장함수: Car → CarUi ---------------- */
-private fun Car.toCarUi() = com.autoever.mocar.ui.common.component.molecules.CarUi(
+private fun Car.toUi(isFavorite: Boolean) = CarUi(
     id = id,
     title = title,
-    imageUrl = imageUrl,
+    imageUrl = imageUrl,   // URL 사용
     imageRes = null,
     mileageKm = mileageKm,
     region = region,
