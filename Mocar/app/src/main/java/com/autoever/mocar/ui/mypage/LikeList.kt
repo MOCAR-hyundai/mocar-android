@@ -1,17 +1,15 @@
 package com.autoever.mocar.ui.mypage
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -21,6 +19,7 @@ import com.autoever.mocar.data.listings.toCar
 import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
 import com.autoever.mocar.ui.common.component.molecules.CarGrid
 import com.autoever.mocar.ui.common.component.molecules.CarUi
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
@@ -28,14 +27,13 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
-import com.google.firebase.Timestamp
 
 // Like 데이터 모델
 data class LikeItem(
     val fid: String = "",
     val userId: String = "",
     val listingId: String = "",
-    val createdAt: String = ""
+    val createdAt: Timestamp? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +82,6 @@ fun LikeListScreen(
                             try {
                                 val doc = db.collection("listings").document(id).get().await()
                                 doc.toObject(ListingDto::class.java)?.toCar()
-
                             } catch (_: Exception) {
                                 null
                             }
@@ -97,18 +94,6 @@ fun LikeListScreen(
             errorMessage = "찜 목록 불러오기 실패: ${e.message}"
         } finally {
             isLoading = false
-        }
-    }
-
-    val removeFromLikes: (String) -> Unit = { carId ->
-        val likeToRemove = likeItems.find { it.listingId == carId }
-        likeToRemove?.let { like ->
-            db.collection(collectionName).document(like.fid)
-                .delete()
-                .addOnSuccessListener {
-                    likeItems = likeItems.filter { it.listingId != carId }
-                    likedCars = likedCars.filter { it.id != carId }
-                }
         }
     }
 
@@ -140,7 +125,7 @@ fun LikeListScreen(
                 }
                 else -> {
                     // Car → CarUi 매핑 후 2열 Grid로 표시
-                    val carUis = likedCars.map { it.toUi() }
+                    val carUis = likedCars.map { it.toCarUi() }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
@@ -148,9 +133,8 @@ fun LikeListScreen(
                     ) {
                         item {
                             CarGrid(
-                                cars = carUis,
-                                onFavoriteToggle = removeFromLikes,
-                                onCardClick = onCarClick
+                                navController = navController,
+                                cars = carUis
                             )
                         }
                     }
@@ -160,8 +144,7 @@ fun LikeListScreen(
     }
 }
 
-/* ---------------- 확장함수: Car → CarUi ---------------- */
-private fun Car.toUi() = CarUi(
+private fun Car.toCarUi() = CarUi(
     id = id,
     title = title,
     imageUrl = imageUrl,
