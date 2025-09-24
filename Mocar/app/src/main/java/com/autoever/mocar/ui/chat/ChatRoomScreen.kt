@@ -18,8 +18,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
@@ -31,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -128,12 +133,26 @@ fun ChatRoomScreen(
                     Text("메시지를 입력해 대화를 시작해 보세요.", color = TimeGray)
                 }
             } else {
+                val messages by vm.messages.collectAsState()
+                val listState = rememberLazyListState()
+                LaunchedEffect(messages.size) {
+                    if (messages.isNotEmpty()) {
+                        listState.animateScrollToItem(messages.lastIndex)
+                    }
+                }
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(messages, key = { it.id }) { msg ->
+                    itemsIndexed(messages, key = { _, m -> m.id }) { index, msg ->
+                        // 날짜 구분선 (전 메시지와 날짜가 다르면 출력)
+                        val prev = messages.getOrNull(index - 1)
+                        if (prev == null || !isSameDay(prev.createdAt, msg.createdAt)) {
+                            DayDivider(msg.createdAt)
+                            Spacer(Modifier.height(6.dp))
+                        }
                         MessageRow(msg)
                     }
                 }
@@ -145,31 +164,59 @@ fun ChatRoomScreen(
 /* ---- 말풍선 ---- */
 @Composable
 private fun MessageRow(msg: Message) {
-    val shapeMine = RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
-    val shapeOther = RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+    val screenW = LocalConfiguration.current.screenWidthDp
+    val maxBubbleWidth = (screenW * 0.72f).dp     // 화면의 72%까지만
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (msg.mine) Alignment.End else Alignment.Start
+    val bubbleShape = RoundedCornerShape(10.dp)   // 둥근 네모(조금 각지게)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),   // 옆 여백 최소화
+        horizontalArrangement = if (msg.mine) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom                 // 시간 텍스트 하단 정렬
     ) {
-        Box(
-            modifier = Modifier
-                .clip(if (msg.mine) shapeMine else shapeOther)
-                .background(if (msg.mine) BubbleMine else BubbleOther)
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
+        if (msg.mine) {
+            // 내 메시지: 시간 ← 버블
             Text(
-                text = msg.text.orEmpty(),
-                color = if (msg.mine) Color.White else Color.Black,
-                fontSize = 15.sp
+                text = timeLabel(msg.createdAt),
+                fontSize = 11.sp,
+                color = TimeGray,
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            Surface(
+                shape = bubbleShape,
+                color = BubbleMine,
+                modifier = Modifier.widthIn(max = maxBubbleWidth) // ★ 가로폭 제한
+            ) {
+                Text(
+                    text = msg.text.orEmpty(),
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
+        } else {
+            // 상대 메시지: 버블 → 시간
+            Surface(
+                shape = bubbleShape,
+                color = BubbleOther,
+                modifier = Modifier.widthIn(max = maxBubbleWidth) // ★ 가로폭 제한
+            ) {
+                Text(
+                    text = msg.text.orEmpty(),
+                    color = Color.Black,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
+            Text(
+                text = timeLabel(msg.createdAt),
+                fontSize = 11.sp,
+                color = TimeGray,
+                modifier = Modifier.padding(start = 6.dp)
             )
         }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = timeLabel(msg.createdAt),
-            fontSize = 10.sp,
-            color = TimeGray
-        )
     }
 }
 
@@ -194,7 +241,7 @@ private fun ChatInputBar(
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 56.dp),
-                placeholder = { Text("메시지를 입력하세요…") },
+                placeholder = { Text("메시지를 입력하세요") },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -221,6 +268,32 @@ private fun ChatInputBar(
         }
     }
 }
+
+private fun isSameDay(a: Long, b: Long): Boolean {
+    val ca = java.util.Calendar.getInstance().apply { timeInMillis = a }
+    val cb = java.util.Calendar.getInstance().apply { timeInMillis = b }
+    return ca.get(java.util.Calendar.YEAR) == cb.get(java.util.Calendar.YEAR) &&
+            ca.get(java.util.Calendar.DAY_OF_YEAR) == cb.get(java.util.Calendar.DAY_OF_YEAR)
+}
+
+@Composable
+private fun DayDivider(millis: Long) {
+    val fmt = remember { java.text.SimpleDateFormat("yyyy년 M월 d일", java.util.Locale.getDefault()) }
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Surface(
+            color = Color(0xFFF0F2F5),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = fmt.format(java.util.Date(millis)),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                color = Color(0xFF6B7280),
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
 
 /* ---- 시간 포맷 ---- */
 @Composable

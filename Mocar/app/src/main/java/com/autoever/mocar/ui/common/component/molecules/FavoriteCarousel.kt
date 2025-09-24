@@ -7,12 +7,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 
 @Composable
 fun FavoriteCarousel(
+    navController: NavController,
     cars: List<CarUi>,
-    onToggleFav: (CarUi) -> Unit,
-    onCardClick: (CarUi) -> Unit,
     horizontalSpacingDp: Int = 12
 ) {
     LazyRow(
@@ -21,10 +21,8 @@ fun FavoriteCarousel(
     ) {
         items(cars, key = { it.id }) { car ->
             CarCard(
+                navController = navController,
                 car = car,
-                onFavoriteToggle = { onToggleFav(car) },
-                modifier = Modifier.width(260.dp),
-                onClick = { onCardClick(car) }
             )
         }
     }

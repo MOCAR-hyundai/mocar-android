@@ -7,8 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -19,10 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.ui.platform.LocalContext
@@ -30,10 +28,6 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 fun MyPageScreen(
     navController: NavHostController,
-    onWishListClick: () -> Unit,
-    onPurchaseListClick: () -> Unit,
-    onRegisterListClick: () -> Unit,
-    onSettingsClick: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
@@ -44,7 +38,7 @@ fun MyPageScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.Top
     ) {
         if (user != null) {
@@ -64,7 +58,6 @@ fun MyPageScreen(
                 // Firestore에서 유저 정보 fetch
                 LaunchedEffect(user.uid) {
                     if (!isUserLoaded) {
-                        val db = FirebaseFirestore.getInstance()
                         db.collection("users").document(user.uid)
                             .get()
                             .addOnSuccessListener { document ->
@@ -125,28 +118,10 @@ fun MyPageScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-//                Column(
-//                    modifier = Modifier
-//                        .clip(RoundedCornerShape(12.dp))
-//                        .clickable { onEditProfileClick() }
-//                        .padding(8.dp),
-//                    horizontalAlignment = Alignment.CenterHorizontally
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.Edit,
-//                        contentDescription = "회원정보 수정",
-//                        modifier = Modifier
-//                            .size(24.dp)
-//                    )
-//                    Spacer(modifier = Modifier.height(4.dp))
-//                    Text(
-//                        text = "회원정보 수정",
-//                        style = MaterialTheme.typography.labelMedium,
-//                    )
-//                }
+
             }
         } else {
-            // 로그인 안 됨: 전체 영역 "로그인해주세요"로 대체, 클릭 시 로그인 화면으로 이동
+            // 로그인 안 됨: 클릭 시 로그인 화면으로 이동
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -213,7 +188,9 @@ fun MyPageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onPurchaseListClick() }
+                    .clickable {
+                        navController.navigate("buy_list")
+                    }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -249,7 +226,7 @@ fun MyPageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onRegisterListClick() }
+                    .clickable { navController.navigate("sell_list") }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -295,7 +272,7 @@ fun MyPageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onSettingsClick() }
+                    .clickable {  }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -348,7 +325,7 @@ fun MyPageScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ExitToApp,
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "로그아웃",
                     )
                 }
@@ -427,16 +404,4 @@ fun MyPageScreen(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MyPageScreenPreview() {
-    MyPageScreen(
-        navController = rememberNavController(),
-        onWishListClick = {},
-        onPurchaseListClick = {},
-        onRegisterListClick = {},
-        onSettingsClick = {},
-    )
 }

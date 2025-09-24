@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import carDetailRoute
 import com.autoever.mocar.R
 import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.ui.common.component.atoms.BrandChip
@@ -71,15 +71,24 @@ fun HomeRoute(
         androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val state by vm.uiState.collectAsState()
+    val favorites by vm.favoriteIds.collectAsState(emptySet())
 
     when {
-        state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("로딩 중…") }
-        state.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text("오류: ${state.error}") }
+        state.loading -> Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) { CircularProgressIndicator() }
+        state.error != null -> Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("오류: ${state.error}", color = Color.Red)
+        }
         else -> HomeScreen(
             navController = navController,
             cars = state.cars,
             brands = state.brands,
-            onToggleFavorite = { vm.toggleFavorite(it) },
+            favorites = favorites,
             scrollSignal = scrollSignal
         )
     }
@@ -91,7 +100,7 @@ fun HomeScreen(
     navController: NavController,
     cars: List<Car>,
     brands: List<BrandUi>,
-    onToggleFavorite: (String) -> Unit,
+    favorites: Set<String>,
     scrollSignal: Int
 ) {
     val gutter = 22.dp
@@ -144,9 +153,10 @@ fun HomeScreen(
         item { SectionHeader("찜한 목록", "Available", "View All") }
         item {
             FavoriteCarousel(
-                cars = cars.filter { it.isFavorite }.map { it.toUi() },
-                onToggleFav = { c -> onToggleFavorite(c.id) },
-                onCardClick = { car -> navController.navigate(carDetailRoute(car.id)) }
+                navController = navController,
+                cars = cars
+                    .filter { favorites.contains(it.id) }
+                    .map { it.toUi() },
             )
         }
 
@@ -192,9 +202,10 @@ fun HomeScreen(
         // 차량 카드 2열 그리드
         item {
             CarGrid(
-                cars = filtered.map { it.toUi() },
-                onFavoriteToggle = { carId -> onToggleFavorite(carId) },
-                onCardClick = { carId -> navController.navigate(carDetailRoute(carId)) }
+                navController = navController,
+                cars = filtered.map { car ->
+                    car.toUi()
+                },
             )
         }
     }
@@ -209,7 +220,6 @@ private fun Car.toUi() = CarUi(
     mileageKm = mileageKm,
     region = region,
     priceKRW = priceKRW,
-    isFavorite = isFavorite
 )
 
 /* ---------------- TopBar ---------------- */
@@ -323,14 +333,3 @@ private fun SectionHeader(
         }
     }
 }
-
-/* ---------------- 가격 포맷터 ---------------- */
-//fun formatKrwPretty(amount: Long): String {
-//    val eok = amount / 100_000_000
-//    val man = (amount % 100_000_000) / 10_000
-//    return when {
-//        eok > 0L && man > 0L -> "${eok}억 ${String.format("%,d만원", man)}"
-//        eok > 0L && man == 0L -> "${eok}억"
-//        else -> String.format("%,d만원", man)
-//    }
-//}

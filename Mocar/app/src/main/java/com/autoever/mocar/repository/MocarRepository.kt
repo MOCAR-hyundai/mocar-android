@@ -5,6 +5,7 @@ import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.price.PriceIndexDto
 import com.autoever.mocar.domain.model.ChatRoom
 import com.autoever.mocar.domain.model.Message
+import com.autoever.mocar.domain.model.Seller
 import kotlinx.coroutines.flow.Flow
 
 interface MocarRepository {
@@ -42,6 +43,10 @@ interface MocarRepository {
 
     /** 내가 속한 채팅방 스트림 */
     fun chatRooms(myUid: String): Flow<List<ChatRoom>>
+
+    fun sellerById(uid: String): Flow<Seller?>
+
+    suspend fun updateListingStatus(listingId: String, status: String)
 }
 
 sealed class StartSaleResult {

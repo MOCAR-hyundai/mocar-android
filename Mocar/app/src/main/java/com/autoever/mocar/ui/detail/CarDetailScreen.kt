@@ -1,9 +1,11 @@
 package com.autoever.mocar.ui.detail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,16 +28,22 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -56,8 +66,8 @@ import com.autoever.mocar.domain.model.Car
 import com.autoever.mocar.domain.model.Seller
 import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
 import com.autoever.mocar.ui.common.util.formatKrwPretty
+import com.autoever.mocar.viewmodel.ListingStatus
 import com.autoever.mocar.viewmodel.PriceUi
-import org.checkerframework.checker.units.qual.min
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -65,24 +75,43 @@ fun CarDetailScreen(
     car: Car,
     seller: Seller?,
     price: PriceUi?,
+    isOwner: Boolean,
+    isFavorite: Boolean,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onChangeStatus: (String) -> Unit,
     onBuyClick: () -> Unit
 ) {
 
-    var isFav by remember(car.id) { mutableStateOf(car.isFavorite) }
+    var isFav by remember(car.id) { mutableStateOf(isFavorite) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var status by remember(car.id) { mutableStateOf(car.status) }
 
     Scaffold(
         topBar = {
-            MocarTopBar(
-                title = { Text(car.plateNo, style = MaterialTheme.typography.titleMedium) },
-                onBack = onBack,
-                onMore = { /* TODO: 메뉴 */ }
-            )
+            Box(Modifier.fillMaxWidth()) {
+                MocarTopBar(
+                    title = { Text(car.plateNo, style = MaterialTheme.typography.titleMedium) },
+                    onBack = onBack,
+                    onMore = null,
+                    rightContent = if (isOwner) {
+                        {
+                            StatusChanger(
+                                isOwner = true,
+                                onChangeStatus = { newStatus ->
+                                    status = newStatus
+                                    onChangeStatus(newStatus)
+                                }
+                            )
+                        }
+                    } else null
+                )
+            }
         },
         bottomBar = {
             BottomActionBar(
                 priceRange = formatKrwPretty(car.priceKRW),
+                enabled = status != ListingStatus.SOLD,
                 onBuy = onBuyClick
             )
         }
@@ -410,21 +439,31 @@ private fun PriceSlider() {
 @Composable
 private fun BottomActionBar(
     priceRange: String,
+    enabled: Boolean = true,
     onBuy: () -> Unit
 ) {
     Surface(shadowElevation = 8.dp, color = Color.White) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val bg = if (enabled) Color(0xFF2A5BFF) else Color(0xFFE5E7EB)
+            val fg = if (enabled) Color.White else Color(0xFF9CA3AF)
+
             Surface(
                 modifier = Modifier
                     .height(48.dp)
                     .fillMaxWidth() // 전체 폭 사용
-                    .clickable { onBuy() },
+                    .let { if (enabled) it.clickable { onBuy() } else it }
+                    .then(
+                        if (enabled) Modifier.clickable(onClick = onBuy)
+                        else Modifier
+                    )
+                    .alpha(if (enabled) 1f else 0.6f),
                 shape = RoundedCornerShape(12.dp),
                 color = Color(0xFF2A5BFF)
             ) {
@@ -462,38 +501,43 @@ fun PriceBandReadonly(
         else (safeCur - safeMin).toFloat() / (safeMax - safeMin).toFloat() * trackWidthPx
     }
 
+    // 라벨이 좌우로 잘리지 않도록 여유(라벨 반폭) 만큼 클램프
+    val labelHalfDp = 32.dp
+    val labelHalfPx = with(density) { labelHalfDp.toPx() }
+    val clampedXPx = remember(thumbXPx, trackWidthPx) {
+        if (trackWidthPx <= 0f) 0f
+        else thumbXPx.coerceIn(labelHalfPx, trackWidthPx - labelHalfPx)
+    }
+
     Column(modifier) {
         // ① 범위 텍스트
         Text(
             "${formatKrwPretty(safeMin)} ~ ${formatKrwPretty(safeMax)}",
             fontWeight = FontWeight.SemiBold
         )
-
         Spacer(Modifier.height(8.dp))
 
-        // ② 트랙 + 하이라이트 + 썸(점)
+        // ② 트랙 + 썸 + (썸 위 라벨)
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(28.dp)
+                .height(44.dp) // ⬅️ (변경) 라벨 자리 더 확보 (기존 36dp → 44dp)
                 .onGloballyPositioned { trackWidthPx = it.size.width.toFloat() }
         ) {
-            // 트랙
+            // 트랙 (아래쪽에 정렬)
             Canvas(
                 Modifier
-                    .align(Alignment.Center)
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .height(8.dp)
             ) {
                 val h = size.height
                 val r = h / 2f
-                // 바탕 트랙
                 drawRoundRect(
                     color = Color(0xFFE5E7EB),
                     size = androidx.compose.ui.geometry.Size(size.width, h),
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(r, r)
                 )
-                // 하이라이트(전체 밴드를 표시하므로 전체 폭을 파란색으로)
                 drawRoundRect(
                     color = Color(0xFF2A5BFF),
                     size = androidx.compose.ui.geometry.Size(size.width, h),
@@ -501,50 +545,113 @@ fun PriceBandReadonly(
                 )
             }
 
-            // 현재가 점(썸)
+            // 썸: 한 겹으로 (파란 원 + 흰 보더)
             Box(
                 Modifier
                     .size(16.dp)
-                    .align(Alignment.CenterStart)
+                    .align(Alignment.BottomStart)
                     .absoluteOffset(
-                        x = with(density) { thumbXPx.toDp() - 8.dp }  // 점의 중심이 오게 - 반지름
-                    )
-                    .clip(CircleShape)
-                    .background(Color.White) // 테두리 대비
-            )
-            Box(
-                Modifier
-                    .size(12.dp)
-                    .align(Alignment.CenterStart)
-                    .absoluteOffset(
-                        x = with(density) { thumbXPx.toDp() - 6.dp }
+                        x = with(density) { thumbXPx.toDp() - 8.dp }, // 중심 보정
+                        y = 1.dp
                     )
                     .clip(CircleShape)
                     .background(Color(0xFF2A5BFF))
+                    .border(2.dp, Color.White, CircleShape)
             )
+
+            // 라벨
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color.White,
+                tonalElevation = 2.dp,
+                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .absoluteOffset(
+                        x = with(density) { clampedXPx.toDp() - labelHalfDp }, // 중앙 정렬
+                        y = (-21).dp
+                    )
+            ) {
+                Text(
+                    text = formatKrwPretty(safeCur),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    fontSize = 12.sp,
+                    color = Color(0xFF111827),
+                )
+            }
         }
 
-        // ③ 아래 레이블 (min / 현재 / max)
-        Box(Modifier.fillMaxWidth()) {
+        // ③ 아래 레이블: min / max
+        Row(Modifier.fillMaxWidth()) {
             Text(
                 formatKrwPretty(safeMin),
                 color = Color(0xFF9CA3AF),
                 fontSize = 11.sp,
-                modifier = Modifier.align(Alignment.CenterStart)
             )
-            Text(
-                formatKrwPretty(safeCur),
-                color = Color(0xFF111827),
-                fontSize = 11.sp,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .absoluteOffset(x = with(density) { thumbXPx.toDp() - 20.dp }) // 대충 가운데 오도록 살짝 보정
-            )
+            Spacer(Modifier.weight(1f))
             Text(
                 formatKrwPretty(safeMax),
                 color = Color(0xFF9CA3AF),
                 fontSize = 11.sp,
-                modifier = Modifier.align(Alignment.CenterEnd)
+            )
+        }
+    }
+}
+
+
+
+@Composable
+private fun StatusChanger(
+    isOwner: Boolean,
+    onChangeStatus: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (!isOwner) return
+
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier) {
+        TextButton(
+            onClick = { expanded = true },
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = Color(0xFF111827) //검정색
+            )
+        ) {
+            Text("상태변경")
+            Icon(
+                imageVector = Icons.Rounded.ArrowDropDown,
+                contentDescription = null
+            )
+        }
+
+        // 라벨 바로 아래로 붙는 드롭다운
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color.White)
+        ) {
+            DropdownMenuItem(
+                text = { Text("판매중") },
+                onClick = {
+                    expanded = false
+                    onChangeStatus(ListingStatus.ON_SALE) // "on_sale"
+                }
+            )
+            Divider(color = Color(0xFFE5E7EB))
+            DropdownMenuItem(
+                text = { Text("예약중") },
+                onClick = {
+                    expanded = false
+                    onChangeStatus(ListingStatus.RESERVED) // "reserved"
+                }
+            )
+            Divider(color = Color(0xFFE5E7EB))
+            DropdownMenuItem(
+                text = { Text("판매완료") },
+                onClick = {
+                    expanded = false
+                    onChangeStatus(ListingStatus.SOLD) // "sold"
+                }
             )
         }
     }

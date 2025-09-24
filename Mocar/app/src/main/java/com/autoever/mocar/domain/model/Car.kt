@@ -1,5 +1,6 @@
 package com.autoever.mocar.domain.model
 
+
 data class Car(
     val id: String,              // 내부 고유 ID
     val plateNo: String,         // 차량번호 (예: "21나4827")
@@ -14,8 +15,9 @@ data class Car(
     val priceKRW: Long,          // 가격 (원)
     val images: List<String>,
     val imageUrl: String?,
-    var isFavorite: Boolean = false,
     val brandId: String,          // 브랜드 ID
     val brandName: String = "",
-    val description: String? = null
+    val description: String? = null,
+    val status: String,
+    val sellerId: String = ""
 )

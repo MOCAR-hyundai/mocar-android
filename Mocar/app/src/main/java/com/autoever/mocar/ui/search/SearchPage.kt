@@ -478,7 +478,8 @@ fun BottomButtons(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp)
+            .navigationBarsPadding(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         OutlinedButton(
@@ -511,14 +512,18 @@ fun BottomButtons(
                     subModels = searchManufacturerViewModel.selectedSubModels,
                     filterState = searchFilterViewModel.filterState.value
                 )
+
+                searchResultViewModel.setResults(filteredListings)
+                
                 searchFilterViewModel.setFilterParamsFromCurrentState(
                     brand = searchManufacturerViewModel.selectedBrand,
                     model = searchManufacturerViewModel.selectedModel,
                     subModels = searchManufacturerViewModel.selectedSubModels,
                     filterState = searchFilterViewModel.filterState.value
                 )
-//                        결과페이지 내비게이션추가
-//                        navController.navigate("")
+                
+                // 검색 결과 페이지로 이동                
+                navController.navigate("result")
 
 
                 searchResultViewModel.setResults(filteredListings)

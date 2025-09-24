@@ -45,6 +45,7 @@ fun ModelSelect(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 20.dp)
+            .navigationBarsPadding()
     ) {
         // 상단 바
         Row(
@@ -158,6 +159,7 @@ fun SubModelSelect(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 20.dp)
+            .navigationBarsPadding(),
     ) {
         // 상단 경로 바
         Row(

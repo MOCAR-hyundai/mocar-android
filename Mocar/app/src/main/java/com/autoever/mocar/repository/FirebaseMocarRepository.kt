@@ -9,6 +9,7 @@ import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.price.PriceIndexDto
 import com.autoever.mocar.domain.model.ChatRoom
 import com.autoever.mocar.domain.model.Message
+import com.autoever.mocar.domain.model.Seller
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -17,6 +18,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 
@@ -142,7 +146,7 @@ class FirebaseMocarRepository(
 
         val upd = hashMapOf<String, Any>(
             "status" to "on_sale",
-            "updatedAt" to com.google.firebase.Timestamp.now()
+            "updatedAt" to Timestamp.now()
         ).apply {
             mileageKm?.let { put("mileage", it) }
             priceKRW?.let { put("price", it) }
@@ -248,4 +252,36 @@ class FirebaseMocarRepository(
 
         awaitClose { regs.forEach { it.remove() } }
     }
+
+    override fun sellerById(uid: String): Flow<Seller?> = callbackFlow {
+        val reg = db.collection("users").document(uid)
+            .addSnapshotListener { snap, _ ->
+                if (snap != null && snap.exists()) {
+                    trySend(
+                        Seller(
+                            id = snap.id,
+                            name = snap.getString("name") ?: "",
+                            photoUrl = snap.getString("photoUrl") ?: "",
+                            rating = snap.getDouble("rating") ?: 0.0,
+                            ratingCount = (snap.getLong("ratingCount") ?: 0L).toInt()
+                        )
+                    )
+                } else trySend(null)
+            }
+        awaitClose { reg.remove() }
+    }
+
+    override suspend fun updateListingStatus(listingId: String, status: String) {
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val nowStr = sdf.format(Date())
+
+        db.collection("listings").document(listingId)
+            .update(
+                mapOf(
+                    "status" to status,
+                    "updatedAt" to nowStr  //문자열 저장
+                )
+            )
+    }
+
 }

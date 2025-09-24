@@ -35,6 +35,7 @@ import coil.compose.AsyncImage
 import com.autoever.mocar.data.listings.ListingDto
 import com.autoever.mocar.data.listings.toCar
 import com.autoever.mocar.ui.common.component.atoms.MocarTopBar
+import com.autoever.mocar.ui.common.util.formatKrwPretty
 import com.autoever.mocar.viewmodel.ResultFilterParams
 import com.autoever.mocar.viewmodel.SearchResultViewModel
 import java.text.NumberFormat
@@ -114,6 +115,9 @@ fun SearchResultPage(
                     Text("검색 결과가 없습니다.", color = Color.Gray)
                 }
             } else {
+                val favoriteIds = remember(favorites) {
+                    favorites.map { normalizeId(it.listingId) }.toSet()
+                }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -121,7 +125,6 @@ fun SearchResultPage(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val favoriteIds = favorites.map { it.listingId }.toSet()
                     val carPairs = filteredCars.chunked(2)
                     items(carPairs.size) { idx ->
                         Row(
@@ -129,13 +132,14 @@ fun SearchResultPage(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             val car1 = carPairs[idx][0]
+                            val car1Id = normalizeId(car1.listingId)
                             CarCardVertical(
                                 listing = car1,
-                                isFavorite = favoriteIds.contains(car1.listingId),
+                                isFavorite = favoriteIds.contains(car1Id),
                                 onClick = { navController.navigate(carDetailRoute(car1.listingId)) },
                                 onFavoriteClick = {
-                                    if (favoriteIds.contains(car1.listingId)) {
-                                        searchResultViewModel.removeFavorite(car1.listingId)
+                                    if (favoriteIds.contains(car1Id)) {
+                                        searchResultViewModel.removeFavorite(car1Id)
                                     } else {
                                         searchResultViewModel.addFavorite(car1)
                                     }
@@ -145,13 +149,14 @@ fun SearchResultPage(
 
                             if (carPairs[idx].size > 1) {
                                 val car2 = carPairs[idx][1]
+                                val car2Id = normalizeId(car2.listingId)
                                 CarCardVertical(
                                     listing = car2,
-                                    isFavorite = favoriteIds.contains(car2.listingId),
+                                    isFavorite = favoriteIds.contains(car2Id),
                                     onClick = { navController.navigate(carDetailRoute(car2.listingId)) },
                                     onFavoriteClick = {
-                                        if (favoriteIds.contains(car2.listingId)) {
-                                            searchResultViewModel.removeFavorite(car2.listingId)
+                                        if (favoriteIds.contains(car2Id)) {
+                                            searchResultViewModel.removeFavorite(car2Id)
                                         } else {
                                             searchResultViewModel.addFavorite(car2)
                                         }
@@ -604,13 +609,13 @@ fun FilterLabelButton(label: String, onClick: () -> Unit) {
 @Composable
 fun CarCardVertical(
     listing: ListingDto,          // ListingDto 객체
-    isFavorite: Boolean,          // 즐겨찾기 상태 파라미터 추가
+    isFavorite: Boolean,          // 부모에서 계산해 전달,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
     // ListingDto를 Car로 변환할 때 isFavorite 값을 전달
-    val car = listing.toCar(isFavorite)
+    val car = listing.toCar()
 
     Column(
         modifier = modifier
@@ -636,9 +641,9 @@ fun CarCardVertical(
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
                 Icon(
-                    imageVector = if (car.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = null,
-                    tint = if (car.isFavorite) Color.Red else Color.Gray
+                    tint = if (isFavorite) Color.Red else Color.Gray
                 )
             }
         }
@@ -652,7 +657,11 @@ fun CarCardVertical(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${NumberFormat.getNumberInstance(Locale.KOREA).format(car.priceKRW)}만원",
+                formatKrwPretty(car.priceKRW),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2A5BFF)
+                ),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 color = Color(0xFF3058EF)
@@ -660,3 +669,6 @@ fun CarCardVertical(
         }
     }
 }
+
+private fun normalizeId(raw: String?): String =
+    raw?.removePrefix("listing_")?.trim().orEmpty()
