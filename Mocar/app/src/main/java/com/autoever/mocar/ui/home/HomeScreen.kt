@@ -158,7 +158,7 @@ fun HomeScreen(
             FavoriteCarousel(
                 cars = cars
                     .filter { favorites.contains(it.id) }
-                    .map { it.toUi(isFavorite = true) },
+                    .map { it.toUi() },
                 onToggleFav = { c -> onToggleFavorite(c.id) },
                 onCardClick   = { car -> navController.navigate(carDetailRoute(car.id)) }
             )
@@ -207,7 +207,7 @@ fun HomeScreen(
         item {
             CarGrid(
                 cars = filtered.map { car ->
-                    car.toUi(isFavorite = favorites.contains(car.id))
+                    car.toUi()
                 },
                 onFavoriteToggle = { carId -> onToggleFavorite(carId) },
                 onCardClick = { carId -> navController.navigate(carDetailRoute(carId)) }
@@ -217,7 +217,7 @@ fun HomeScreen(
 }
 
 /* ---------------- 매퍼 (도메인 → UI) ---------------- */
-private fun Car.toUi(isFavorite: Boolean) = CarUi(
+private fun Car.toUi() = CarUi(
     id = id,
     title = title,
     imageUrl = imageUrl,   // URL 사용
@@ -225,7 +225,6 @@ private fun Car.toUi(isFavorite: Boolean) = CarUi(
     mileageKm = mileageKm,
     region = region,
     priceKRW = priceKRW,
-    isFavorite = isFavorite
 )
 
 /* ---------------- TopBar ---------------- */

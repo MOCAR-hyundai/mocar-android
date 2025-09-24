@@ -43,7 +43,6 @@ data class CarUi(
     val mileageKm: Int,
     val region: String,
     val priceKRW: Long,
-    val isFavorite: Boolean,
     val imageUrl: String? = null,
     val imageRes: Int? = null
 )
@@ -89,16 +88,16 @@ fun CarCard(
                         )
                     }
                 }
-                Icon(
-                    imageVector = if (car.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "찜",
-                    tint = if (car.isFavorite) Color.Red else Color(0xFF111827),
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp)
-                        .size(24.dp)
-                        .clickable { onFavoriteToggle() }
-                )
+//                Icon(
+//                    imageVector = if (car.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+//                    contentDescription = "찜",
+//                    tint = if (car.isFavorite) Color.Red else Color(0xFF111827),
+//                    modifier = Modifier
+//                        .align(Alignment.TopEnd)
+//                        .padding(12.dp)
+//                        .size(24.dp)
+//                        .clickable { onFavoriteToggle() }
+//                )
             }
             Divider(color = Color(0xFFEDEDED), thickness = 1.dp)
             Column(Modifier.background(Color.White).padding(12.dp)) {
