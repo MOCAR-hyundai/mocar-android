@@ -86,8 +86,7 @@ fun CarCard(
         modifier = modifier
             .fillMaxWidth()
             .widthIn(max = 320.dp)
-            .height(260.dp),
-//            .wrapContentHeight(),
+            .wrapContentHeight(),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
         colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
@@ -155,12 +154,11 @@ fun CarCard(
                 )
             }
             Divider(color = Color(0xFFEDEDED), thickness = 1.dp)
-            Column(Modifier.background(Color.White).padding(12.dp).weight(1f)) {
+            Column(Modifier.background(Color.White).padding(12.dp)) {
                 Text(
                     car.title,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                    maxLines = 2,
-                    minLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(8.dp))
