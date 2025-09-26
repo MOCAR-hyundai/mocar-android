@@ -185,7 +185,7 @@ fun SellListFilter(
     Box(
         modifier = Modifier
             .padding(start = 24.dp, top = 24.dp, bottom = 8.dp)
-            .background(Color.White, RoundedCornerShape(8.dp))
+            .background(Color.Transparent, RoundedCornerShape(8.dp))
             .clickable { expanded = true }
     ) {
         Row(
@@ -204,7 +204,8 @@ fun SellListFilter(
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color.Transparent)
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
@@ -212,7 +213,8 @@ fun SellListFilter(
                     onClick = {
                         onStatusChange(option)
                         expanded = false
-                    }
+                    },
+                    modifier = Modifier.background(Color.Transparent)
                 )
             }
         }

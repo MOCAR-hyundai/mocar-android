@@ -17,13 +17,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
 
 @Composable
 fun MyPageScreen(
@@ -83,12 +86,14 @@ fun MyPageScreen(
 
                 // 프로필 이미지
                 if (!userPhotoUrlState.isNullOrBlank()) {
-                    // Coil 등 이미지 라이브러리 사용 필요
-                    // 예시: AsyncImage(model = userPhotoUrlState, contentDescription = "프로필 사진", ...)
-                    Box(
+                    AsyncImage(
+                        model = userPhotoUrlState,
+                        contentDescription = "프로필 사진",
                         modifier = Modifier
                             .size(64.dp)
-                            .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+                            .clip(CircleShape)
+                            .border(2.dp, Color.Gray, CircleShape),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(
