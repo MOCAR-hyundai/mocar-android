@@ -189,7 +189,7 @@ fun CarCardWithStatus(
     onClick: () -> Unit
 ) {
     OutlinedCard(
-        modifier = modifier.clickable(onClick = onClick).width(260.dp).wrapContentHeight(),
+        modifier = modifier.clickable(onClick = onClick).width(260.dp).height(260.dp),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
         colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
@@ -205,11 +205,12 @@ fun CarCardWithStatus(
                 // 즐겨찾기 아이콘은 필요시 추가
             }
             Divider(color = Color(0xFFEDEDED), thickness = 1.dp)
-            Column(Modifier.background(Color.White).padding(12.dp)) {
+            Column(Modifier.background(Color.White).padding(12.dp).weight(1f)) {
                 Text(
                     car.title,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                    maxLines = 1,
+                    maxLines = 2,                    // 제목 2줄 고정
+                    minLines = 2,
                     overflow = TextOverflow.Ellipsis,
 
                 )
@@ -217,6 +218,7 @@ fun CarCardWithStatus(
                 Text(
                     "${car.yearDesc} · ${car.mileageKm}km · ${car.fuel}",
                     fontSize = 12.sp,
+                    maxLines = 1,
                     color = Color.Gray
                 )
                 order?.let {
