@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ExpandMore
@@ -230,7 +231,8 @@ fun CarSellWithStatus(
         OutlinedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight(),
+                .height(260.dp),
+//                .wrapContentHeight(),
             shape = RoundedCornerShape(16.dp),
             border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
             colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
@@ -250,19 +252,22 @@ fun CarSellWithStatus(
 
                 Column(Modifier
                     .fillMaxWidth()
+                    .weight(1f)
                     .background(Color.White)
                     .padding(12.dp)
                 ) {
                     Text(
                         car.title,
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                        maxLines = 1,
+                        maxLines = 2,
+                        minLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "${car.yearDesc} · ${car.mileageKm}km · ${car.fuel}",
                         fontSize = 12.sp,
+                        maxLines = 1,
                         color = Color.Gray
                     )
                     Text(
