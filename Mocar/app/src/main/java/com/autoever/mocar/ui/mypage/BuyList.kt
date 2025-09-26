@@ -189,7 +189,7 @@ fun CarCardWithStatus(
     onClick: () -> Unit
 ) {
     OutlinedCard(
-        modifier = modifier.clickable(onClick = onClick).width(260.dp).height(260.dp),
+        modifier = modifier.clickable(onClick = onClick).width(260.dp).height(320.dp),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
         colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
