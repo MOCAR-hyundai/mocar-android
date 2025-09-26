@@ -1,3 +1,4 @@
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -598,64 +600,85 @@ fun FilterLabelButton(label: String, onClick: () -> Unit) {
 // 차 카드
 @Composable
 fun CarCardVertical(
-    listing: ListingDto,          // ListingDto 객체
-    isFavorite: Boolean,          // 부모에서 계산해 전달,
+    listing: ListingDto,
+    isFavorite: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
-    // ListingDto를 Car로 변환할 때 isFavorite 값을 전달
     val car = listing.toCar()
 
-    Column(
+    OutlinedCard(
         modifier = modifier
-            .border(
-                width = 1.dp,
-                color = Color.LightGray.copy(alpha = 0.8f),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable(onClick = onClick)
+            .fillMaxWidth()
+            .height(260.dp)                         // 카드 전체 높이 고정
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.8f)),
+        colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
     ) {
-        Box {
-            AsyncImage(
-                model = car.imageUrl,
-                contentDescription = null,
+        Column(Modifier.fillMaxSize()) {
+
+            // ✅ 이미지 영역을 고정 비율로 (모든 카드 동일 높이)
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
-                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
-                contentScale = ContentScale.Crop
-            )
-            IconButton(
-                onClick = onFavoriteClick,
-                modifier = Modifier.align(Alignment.TopEnd)
+                    .aspectRatio(4f / 3f)           // 필요하면 16f/9f로 변경
+                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
             ) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                AsyncImage(
+                    model = car.imageUrl,
                     contentDescription = null,
-                    tint = if (isFavorite) Color.Red else Color.Gray
+                    modifier = Modifier.fillMaxSize(),   // ❗ width/height 고정 제거
+                    contentScale = ContentScale.Crop
+                )
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (isFavorite) Color.Red else Color.Gray
+                    )
+                }
+            }
+
+            //텍스트 영역: 줄수 고정 + 남는 높이 소화
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)                      // 남는 공간 정리
+                    .padding(8.dp)
+            ) {
+                Text(
+                    car.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 2,                    // 제목 2줄 고정
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "${car.yearDesc} · ${car.mileageKm}km · ${car.fuel} · ${car.region}",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    maxLines = 1,                    //스펙 1줄 고정
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.weight(1f))          // 가격을 하단으로 밀기
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    formatKrwPretty(car.priceKRW),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2A5BFF)
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-        Column(modifier = Modifier.padding(8.dp)) {
-            Text(car.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "${car.yearDesc} · ${car.mileageKm}km · ${car.fuel} · ${car.region}",
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                formatKrwPretty(car.priceKRW),
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2A5BFF)
-                ),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Color(0xFF3058EF)
-            )
         }
     }
 }
